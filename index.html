@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#F6F5F2">
+  <title>Fitness Coach</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    /* ── Tokens ──────────────────────────────────────────── */
+    :root {
+      --bg:          #F6F5F2;
+      --surface:     #FFFFFF;
+      --accent:      #D4511F;
+      --accent-dim:  #FEF4EE;
+      --accent-text: #9A3412;
+      --text:        #1C1917;
+      --muted:       #78716C;
+      --subtle:      #A8A29E;
+      --border:      #E7E5E4;
+      --border-soft: #F5F5F4;
+      --green:       #16A34A;
+      --green-dim:   #DCFCE7;
+      --amber:       #D97706;
+      --amber-dim:   #FEF3C7;
+      --red:         #DC2626;
+      --red-dim:     #FEE2E2;
+      --blue:        #2563EB;
+      --blue-dim:    #DBEAFE;
+
+      --ease-out:    cubic-bezier(0.23, 1, 0.32, 1);
+      --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+      --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+      --r-card: 20px;
+      --r-btn:  14px;
+      --r-inp:  12px;
+      --shadow: 0 2px 12px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    /* ── Reset ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: 'Outfit', -apple-system, sans-serif;
+      font-feature-settings: "cv01";
+      -webkit-font-smoothing: antialiased;
+      background: var(--bg);
+      color: var(--text);
+      touch-action: manipulation;
+      overscroll-behavior: none;
+    }
+
+    /* ── App shell ───────────────────────────────────────── */
+    .app {
+      max-width: 430px;
+      margin: 0 auto;
+      min-height: 100svh;
+      position: relative;
+    }
+
+    /* ── Screens ─────────────────────────────────────────── */
+    .screen { display: none; padding-bottom: 100px; }
+    .screen.active { display: block; }
+
+    .screen-hdr {
+      position: sticky; top: 0; z-index: 50;
+      padding: 52px 20px 14px;
+      background: rgba(246,245,242,0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    .screen-hdr h1 {
+      font-size: 26px; font-weight: 800;
+      letter-spacing: -0.5px; color: var(--text);
+    }
+    .screen-hdr p { font-size: 13px; color: var(--muted); margin-top: 1px; }
+    .content { padding: 16px 16px 0; }
+
+    /* ── Bottom nav (floating pill) ──────────────────────── */
+    .nav {
+      position: fixed;
+      bottom: max(18px, env(safe-area-inset-bottom));
+      left: 50%; transform: translateX(-50%);
+      width: calc(100% - 32px); max-width: 390px;
+      background: rgba(28,25,23,0.92);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-radius: 22px;
+      display: flex; padding: 7px; gap: 2px;
+      z-index: 100;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.1),
+                  inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+    .nav-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      padding: 8px 4px 7px; gap: 3px;
+      border: none; background: none; cursor: pointer;
+      border-radius: 15px;
+      transition: background 220ms var(--ease-out), transform 160ms var(--ease-out);
+    }
+    .nav-btn:active { transform: scale(0.93); }
+    .nav-btn.active { background: rgba(255,255,255,0.1); }
+    .nav-btn svg {
+      width: 20px; height: 20px; fill: none;
+      stroke: rgba(255,255,255,0.38); stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round;
+      transition: stroke 220ms var(--ease-out);
+    }
+    .nav-btn.active svg { stroke: rgba(255,255,255,0.96); }
+    .nav-btn span {
+      font-size: 10px; font-weight: 600;
+      color: rgba(255,255,255,0.38);
+      transition: color 220ms var(--ease-out);
+    }
+    .nav-btn.active span { color: rgba(255,255,255,0.96); }
+
+    /* ── Cards ───────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--r-card);
+      padding: 18px;
+      margin-bottom: 12px;
+      border: 1px solid rgba(0,0,0,0.05);
+      box-shadow: var(--shadow);
+    }
+    .card-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--subtle); margin-bottom: 12px;
+    }
+    .card-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 16px; font-weight: 700; color: var(--text);
+    }
+
+    /* ── Section title ───────────────────────────────────── */
+    .section-title {
+      font-size: 16px; font-weight: 700; color: var(--text);
+      margin: 20px 0 10px;
+    }
+
+    /* ── Buttons ─────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px; padding: 14px 20px;
+      border-radius: var(--r-btn); font-family: 'Outfit', sans-serif;
+      font-weight: 600; font-size: 15px; border: none;
+      cursor: pointer; width: 100%;
+      transition: transform 160ms var(--ease-out), opacity 160ms;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.5; pointer-events: none; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-surface { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost   { background: var(--accent-dim); color: var(--accent); }
+    .btn-danger  { background: var(--red-dim); color: var(--red); }
+    .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+
+    /* ── Inputs ──────────────────────────────────────────── */
+    label.lbl {
+      display: block; font-size: 13px; font-weight: 600;
+      color: var(--muted); margin: 16px 0 6px;
+    }
+    .inp {
+      width: 100%; padding: 13px 14px;
+      border: 1.5px solid var(--border); border-radius: var(--r-inp);
+      font-family: 'Outfit', sans-serif; font-size: 15px; color: var(--text);
+      background: var(--bg); outline: none;
+      transition: border-color 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
+    }
+    .inp:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(212,81,31,0.1);
+    }
+    textarea.inp { min-height: 72px; resize: none; }
+
+    /* ── Chip selector ───────────────────────────────────── */
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip {
+      flex: 1; min-width: 0; padding: 10px 8px;
+      border-radius: 11px; background: var(--border-soft);
+      border: 1.5px solid var(--border); cursor: pointer;
+      font-family: 'Outfit', sans-serif; font-size: 13px;
+      font-weight: 600; color: var(--muted); text-align: center;
+      transition: all 200ms var(--ease-out);
+    }
+    .chip:active { transform: scale(0.96); }
+    .chip.on { border-color: transparent; color: white; }
+
+    /* ── Nutrition hero ──────────────────────────────────── */
+    .cal-hero {
+      display: flex; align-items: baseline; gap: 6px; margin-bottom: 16px;
+    }
+    .cal-num {
+      font-size: 52px; font-weight: 800; letter-spacing: -2px;
+      color: var(--text); line-height: 1;
+    }
+    .cal-unit { font-size: 18px; font-weight: 600; color: var(--muted); }
+    .macro-strip {
+      display: grid; grid-template-columns: repeat(3,1fr);
+      background: var(--bg); border-radius: 14px;
+      overflow: hidden; border: 1px solid var(--border);
+    }
+    .macro-cell {
+      padding: 12px 10px; text-align: center;
+    }
+    .macro-cell + .macro-cell { border-left: 1px solid var(--border); }
+    .macro-val { font-size: 18px; font-weight: 700; display: block; }
+    .macro-key { font-size: 11px; font-weight: 600; color: var(--subtle); margin-top: 2px; display: block; }
+
+    /* ── Food entries ────────────────────────────────────── */
+    .entry {
+      background: var(--surface);
+      border-radius: var(--r-card); margin-bottom: 10px;
+      display: flex; align-items: flex-start;
+      border: 1px solid rgba(0,0,0,0.05);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      animation: slide-up 280ms var(--ease-out) both;
+    }
+    .entry:nth-child(1) { animation-delay:  0ms }
+    .entry:nth-child(2) { animation-delay: 40ms }
+    .entry:nth-child(3) { animation-delay: 80ms }
+    .entry:nth-child(4) { animation-delay:120ms }
+    .entry:nth-child(5) { animation-delay:160ms }
+    .entry:nth-child(n+6){ animation-delay:200ms }
+
+    .entry-body { flex:1; padding: 14px 0 14px 16px; min-width: 0; }
+    .entry-title { font-size: 14px; font-weight: 600; color: var(--text); }
+    .entry-time  { font-size: 12px; color: var(--subtle); margin-top: 2px; }
+    .pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+    .pill {
+      background: var(--accent-dim); color: var(--accent-text);
+      font-size: 11px; font-weight: 600;
+      padding: 3px 8px; border-radius: 20px;
+    }
+    .del-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--subtle); padding: 14px 14px;
+      align-self: center; flex-shrink: 0;
+      transition: color 160ms, transform 160ms var(--ease-out);
+    }
+    .del-btn:active { transform: scale(0.9); color: var(--red); }
+
+    /* ── Training entries ────────────────────────────────── */
+    .t-entry {
+      background: var(--surface);
+      border-radius: var(--r-card); padding: 16px;
+      margin-bottom: 10px;
+      display: flex; align-items: flex-start; gap: 14px;
+      border: 1px solid rgba(0,0,0,0.05);
+      border-left-width: 3px;
+      box-shadow: var(--shadow);
+      animation: slide-up 280ms var(--ease-out) both;
+    }
+    .t-entry:nth-child(1) { animation-delay:  0ms }
+    .t-entry:nth-child(2) { animation-delay: 40ms }
+    .t-entry:nth-child(3) { animation-delay: 80ms }
+    .t-type-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .t-type-icon svg { width: 18px; height: 18px; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .t-info { flex: 1; min-width: 0; }
+    .t-name { font-size: 15px; font-weight: 700; color: var(--text); }
+    .t-detail { font-size: 13px; color: var(--muted); margin-top: 3px; }
+    .t-note { font-size: 12px; color: var(--subtle); margin-top: 4px; font-style: italic; }
+
+    /* ── Sleep stats ─────────────────────────────────────── */
+    .sleep-stats {
+      display: grid; grid-template-columns: repeat(3,1fr);
+      margin-bottom: 14px; gap: 0;
+    }
+    .sleep-stat { text-align: center; padding: 8px 4px; }
+    .sleep-stat + .sleep-stat { border-left: 1px solid var(--border); }
+    .sleep-val { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; color: var(--text); }
+    .sleep-lbl { font-size: 11px; font-weight: 600; color: var(--subtle); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .quality-badge {
+      border-radius: 12px; padding: 10px 14px;
+      text-align: center; font-size: 14px; font-weight: 600;
+    }
+
+    /* ── Quality buttons ─────────────────────────────────── */
+    .q-row { display: flex; gap: 8px; }
+    .q-btn {
+      flex: 1; height: 48px; border-radius: 11px;
+      background: var(--border-soft); border: 1.5px solid var(--border);
+      font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700;
+      color: var(--muted); cursor: pointer;
+      transition: all 200ms var(--ease-out);
+    }
+    .q-btn:active { transform: scale(0.95); }
+    .q-btn.on { color: white; border-color: transparent; }
+    .q-label { text-align: center; font-size: 13px; color: var(--subtle); margin-top: 6px; }
+
+    /* ── Duration preview ────────────────────────────────── */
+    .dur-preview {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--accent-dim); border-radius: 10px;
+      padding: 10px 14px; margin-top: 8px;
+      font-size: 14px; font-weight: 600; color: var(--accent);
+      animation: fade-in 200ms var(--ease-out);
+    }
+    .dur-preview svg { width: 16px; height: 16px; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; flex-shrink: 0; }
+
+    /* ── Exercise builder ────────────────────────────────── */
+    .ex-block {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px; margin-bottom: 10px;
+    }
+    .ex-hdr { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .set-header { display: grid; grid-template-columns: 28px 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+    .set-header span { font-size: 11px; font-weight: 700; color: var(--subtle); text-align: center; text-transform: uppercase; letter-spacing: 0.06em; }
+    .set-row { display: grid; grid-template-columns: 28px 1fr 1fr; gap: 6px; align-items: center; margin-bottom: 6px; }
+    .set-num { font-size: 12px; color: var(--subtle); font-weight: 700; text-align: center; }
+    .set-inp {
+      padding: 9px; border: 1.5px solid var(--border); border-radius: 10px;
+      font-family: 'Outfit', sans-serif; font-size: 14px;
+      font-weight: 600; text-align: center; width: 100%;
+      background: var(--surface); color: var(--text); outline: none;
+      transition: border-color 180ms;
+    }
+    .set-inp:focus { border-color: var(--accent); }
+    .add-set-btn {
+      background: none; border: none; cursor: pointer;
+      font-family: 'Outfit', sans-serif; font-size: 13px;
+      font-weight: 600; color: var(--accent); padding: 4px 0;
+    }
+    .rm-ex-btn {
+      background: var(--red-dim); border: none; cursor: pointer;
+      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--red);
+      transition: transform 160ms var(--ease-out);
+    }
+    .rm-ex-btn:active { transform: scale(0.9); }
+    .add-ex-btn {
+      width: 100%; padding: 13px; border: 1.5px dashed var(--border);
+      border-radius: 12px; background: none; cursor: pointer;
+      font-family: 'Outfit', sans-serif; font-size: 14px;
+      font-weight: 600; color: var(--muted); margin-top: 4px;
+      transition: border-color 180ms, color 180ms;
+    }
+    .add-ex-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── History rows ────────────────────────────────────── */
+    .h-row {
+      background: var(--surface); border-radius: 14px;
+      padding: 14px 16px; margin-bottom: 8px;
+      display: flex; justify-content: space-between; align-items: center;
+      border: 1px solid rgba(0,0,0,0.05);
+      animation: slide-up 280ms var(--ease-out) both;
+    }
+    .h-row:nth-child(1) { animation-delay:  0ms }
+    .h-row:nth-child(2) { animation-delay: 40ms }
+    .h-row:nth-child(3) { animation-delay: 80ms }
+    .h-date { font-size: 14px; font-weight: 600; color: var(--text); }
+    .h-time { font-size: 12px; color: var(--subtle); margin-top: 2px; }
+    .h-right { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .h-dur  { font-size: 20px; font-weight: 800; color: var(--text); }
+    .q-dot  { width: 10px; height: 10px; border-radius: 50%; }
+
+    /* ── Bottom sheet modal ──────────────────────────────── */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(28,25,23,0.4);
+      z-index: 200; display: none;
+      opacity: 0; transition: opacity 300ms var(--ease-out);
+    }
+    .overlay.open { display: block; opacity: 1; }
+    .modal {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%);
+      width: 100%; max-width: 430px;
+      background: var(--bg); border-radius: 24px 24px 0 0;
+      z-index: 201; max-height: 92svh; overflow-y: auto;
+      transition: transform 380ms var(--ease-drawer);
+    }
+    .overlay.open .modal { transform: translateX(-50%) translateY(0); }
+    .modal-hdr {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 18px 18px 14px;
+      background: var(--surface);
+      border-radius: 24px 24px 0 0;
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .modal-hdr h2 { font-size: 17px; font-weight: 700; color: var(--text); }
+    .modal-close {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--border-soft); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted);
+      transition: background 160ms, transform 160ms var(--ease-out);
+    }
+    .modal-close:active { transform: scale(0.9); }
+    .modal-body { padding: 18px 18px 48px; }
+
+    /* ── Advice box ──────────────────────────────────────── */
+    .advice-box {
+      background: var(--surface);
+      border-radius: 16px; padding: 16px;
+      border-left: 3px solid var(--accent);
+      border: 1px solid var(--border);
+      border-left-color: var(--accent);
+      border-left-width: 3px;
+    }
+    .advice-box p { font-size: 14px; color: var(--text); line-height: 1.7; white-space: pre-wrap; }
+    .refresh-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: none; border: none; cursor: pointer;
+      color: var(--accent); font-family: 'Outfit', sans-serif;
+      font-size: 13px; font-weight: 600; margin-top: 12px;
+      transition: opacity 160ms;
+    }
+    .refresh-btn:active { opacity: 0.6; }
+    .refresh-btn svg { width: 14px; height: 14px; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; }
+
+    /* ── Empty states ────────────────────────────────────── */
+    .empty { padding: 48px 16px; text-align: center; }
+    .empty-ring {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: var(--border-soft); border: 1.5px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .empty-ring svg { width: 28px; height: 28px; stroke: var(--subtle); stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .empty h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .empty p  { font-size: 14px; color: var(--muted); }
+
+    /* ── Loading skeleton ────────────────────────────────── */
+    .loader { position: fixed; inset: 0; background: var(--bg); z-index: 300; display: none; padding: 80px 20px 0; }
+    .loader.show { display: block; }
+    .sk {
+      border-radius: 12px;
+      background: linear-gradient(90deg, var(--border) 0%, var(--border-soft) 50%, var(--border) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s ease-in-out infinite;
+    }
+    .sk-card { height: 120px; border-radius: var(--r-card); margin-bottom: 12px; }
+    .sk-line { height: 16px; border-radius: 8px; margin-bottom: 8px; }
+    @keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
+
+    /* ── Loader message ──────────────────────────────────── */
+    .loader-inner {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 100%;
+      padding-bottom: 80px;
+    }
+    .loader-ring {
+      width: 48px; height: 48px; border-radius: 50%;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      animation: spin 0.7s linear infinite;
+      margin-bottom: 16px;
+    }
+    .loader-msg { font-size: 15px; font-weight: 600; color: var(--muted); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Settings rows ───────────────────────────────────── */
+    .s-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 13px 0; border-bottom: 1px solid var(--border-soft);
+      font-size: 14px;
+    }
+    .s-row:last-child { border-bottom: none; }
+    .s-row span:first-child { color: var(--muted); }
+    .s-row span:last-child  { font-weight: 700; color: var(--text); }
+
+    /* ── Dashboard training chip ─────────────────────────── */
+    .t-chip {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 8px 12px; border-radius: 10px;
+      font-size: 13px; font-weight: 600;
+      margin-bottom: 6px; border: 1.5px solid;
+    }
+    .t-chip svg { width: 14px; height: 14px; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Misc ────────────────────────────────────────────── */
+    .hint { font-size: 13px; color: var(--subtle); font-style: italic; text-align: center; padding: 8px 0; }
+    .edit-link { background: none; border: none; cursor: pointer; font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 600; color: var(--accent); }
+    .warning { background: var(--amber-dim); border: 1px solid #F59E0B; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 13px; color: #92400E; line-height: 1.5; }
+    a { color: var(--accent); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+
+    /* ── Animations ──────────────────────────────────────── */
+    @keyframes slide-up {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fade-in {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0ms !important; transition-duration: 0ms !important; }
+    }
+
+    /* ── Food database ──────────────────────────────────── */
+    .db-sep {
+      display: flex; align-items: center; gap: 10px;
+      margin: 16px 0; color: var(--subtle); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .db-sep::before, .db-sep::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .db-row {
+      background: var(--surface); border-radius: 14px;
+      padding: 14px 16px; margin-bottom: 8px;
+      display: flex; align-items: center; gap: 10px;
+      border: 1px solid rgba(0,0,0,0.05);
+      cursor: pointer;
+      transition: background 160ms var(--ease-out), transform 160ms var(--ease-out);
+      animation: slide-up 200ms var(--ease-out) both;
+    }
+    .db-row:nth-child(1) { animation-delay:  0ms }
+    .db-row:nth-child(2) { animation-delay: 30ms }
+    .db-row:nth-child(3) { animation-delay: 60ms }
+    .db-row:nth-child(4) { animation-delay: 90ms }
+    .db-row:nth-child(5) { animation-delay:120ms }
+    .db-row:active { transform: scale(0.98); background: var(--border-soft); }
+    .db-row-body { flex: 1; min-width: 0; }
+    .db-row-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .db-row-sub  { font-size: 12px; color: var(--subtle); margin-top: 2px; }
+    .db-msg { text-align: center; padding: 24px 16px; font-size: 14px; color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── Dashboard ─────────────────────────────────── -->
+  <section id="tab-dashboard" class="screen active">
+    <div class="screen-hdr">
+      <h1>AI Coach</h1>
+      <p id="date-label"></p>
+    </div>
+    <div class="content" id="dashboard-content"></div>
+  </section>
+
+  <!-- ── Food ──────────────────────────────────────── -->
+  <section id="tab-food" class="screen">
+    <div class="screen-hdr"><h1>Voedingslog</h1></div>
+    <div class="content" id="food-content"></div>
+  </section>
+
+  <!-- ── Training ──────────────────────────────────── -->
+  <section id="tab-training" class="screen">
+    <div class="screen-hdr"><h1>Training</h1></div>
+    <div class="content" id="training-content"></div>
+  </section>
+
+  <!-- ── Sleep ─────────────────────────────────────── -->
+  <section id="tab-sleep" class="screen">
+    <div class="screen-hdr"><h1>Slaap</h1></div>
+    <div class="content" id="sleep-content"></div>
+  </section>
+
+  <!-- ── Settings ──────────────────────────────────── -->
+  <section id="tab-settings" class="screen">
+    <div class="screen-hdr"><h1>Instellingen</h1></div>
+    <div class="content" id="settings-content"></div>
+  </section>
+
+  <!-- ── Floating nav ──────────────────────────────── -->
+  <nav class="nav">
+    <button class="nav-btn active" id="nav-dashboard" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Coach</span>
+    </button>
+    <button class="nav-btn" id="nav-food" onclick="switchTab('food')">
+      <svg viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>
+      <span>Voeding</span>
+    </button>
+    <button class="nav-btn" id="nav-training" onclick="switchTab('training')">
+      <svg viewBox="0 0 24 24"><line x1="6" y1="5" x2="6" y2="19"/><line x1="18" y1="5" x2="18" y2="19"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="6" y1="7" x2="10" y2="7"/><line x1="6" y1="17" x2="10" y2="17"/><line x1="14" y1="7" x2="18" y2="7"/><line x1="14" y1="17" x2="18" y2="17"/></svg>
+      <span>Training</span>
+    </button>
+    <button class="nav-btn" id="nav-sleep" onclick="switchTab('sleep')">
+      <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+      <span>Slaap</span>
+    </button>
+    <button class="nav-btn" id="nav-settings" onclick="switchTab('settings')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06-.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <span>Instellingen</span>
+    </button>
+  </nav>
+
+  <!-- ── Bottom sheet modal ─────────────────────────── -->
+  <div class="overlay" id="overlay" onclick="overlayClick(event)">
+    <div class="modal" id="modal">
+      <div class="modal-hdr">
+        <h2 id="modal-title"></h2>
+        <button class="modal-close" onclick="closeModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- ── Loader ─────────────────────────────────────── -->
+  <div class="loader" id="loader">
+    <div class="loader-inner">
+      <div class="loader-ring"></div>
+      <p class="loader-msg" id="loader-text">Bezig…</p>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden file inputs -->
+<input type="file" id="inp-camera"  accept="image/*" capture="environment" style="display:none">
+<input type="file" id="inp-gallery" accept="image/*" style="display:none">
+<input type="file" id="inp-barcode" accept="image/*" capture="environment" style="display:none">
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════
+//  CONSTANTS & ICONS
+// ═══════════════════════════════════════════════════════
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const QUALITY_LABELS = ['','Zeer slecht','Slecht','Matig','Goed','Uitstekend'];
+const QUALITY_COLORS = ['','#DC2626','#D97706','#CA8A04','#16A34A','#059669'];
+
+const TYPE_META = {
+  strength:  { label:'Krachttraining', color:'#2563EB', bg:'#DBEAFE', icon:`<svg viewBox="0 0 24 24"><line x1="6" y1="5" x2="6" y2="19"/><line x1="18" y1="5" x2="18" y2="19"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="6" y1="7" x2="10" y2="7"/><line x1="6" y1="17" x2="10" y2="17"/><line x1="14" y1="7" x2="18" y2="7"/><line x1="14" y1="17" x2="18" y2="17"/></svg>` },
+  motocross: { label:'Motorcross',    color:'#DC2626', bg:'#FEE2E2', icon:`<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>` },
+  endurance: { label:'Duurtraining',  color:'#16A34A', bg:'#DCFCE7', icon:`<svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>` },
+};
+
+const IC = {
+  camera:    `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
+  gallery:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`,
+  plus:      `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+  trash:     `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>`,
+  sparkle:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  refresh:   `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>`,
+  moon:      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>`,
+  pencil:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  key:       `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>`,
+  search:  `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
+  barcode: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="2" height="16"/><rect x="6" y="4" width="1" height="16"/><rect x="9" y="4" width="2" height="16"/><rect x="13" y="4" width="1" height="16"/><rect x="16" y="4" width="3" height="16"/><rect x="21" y="4" width="1" height="16"/></svg>`,
+};
+
+// ═══════════════════════════════════════════════════════
+//  STORAGE
+// ═══════════════════════════════════════════════════════
+const db = {
+  getArr: k   => JSON.parse(localStorage.getItem(`fc_${k}`) || '[]'),
+  getObj: (k,d) => JSON.parse(localStorage.getItem(`fc_${k}`) || JSON.stringify(d ?? {})),
+  set:    (k,v) => localStorage.setItem(`fc_${k}`, JSON.stringify(v)),
+  push:   (k,item) => { const a = db.getArr(k); a.unshift(item); db.set(k,a); },
+  remove: (k,id)   => db.set(k, db.getArr(k).filter(x => x.id !== id)),
+};
+
+// ═══════════════════════════════════════════════════════
+//  DATE HELPERS
+// ═══════════════════════════════════════════════════════
+const todayStr  = () => new Date().toISOString().slice(0,10);
+const forToday  = arr => arr.filter(e => (e.date||e.timestamp||'').startsWith(todayStr()));
+const uid       = () => Math.random().toString(36).slice(2,10);
+
+function calcDuration(bed, wake) {
+  const [bh,bm] = bed.split(':').map(Number);
+  const [wh,wm] = wake.split(':').map(Number);
+  let b = bh*60+bm, w = wh*60+wm;
+  if (w <= b) w += 1440;
+  return (w-b)/60;
+}
+const isTime = t => /^\d{2}:\d{2}$/.test(t);
+
+// ═══════════════════════════════════════════════════════
+//  IMAGE UTILS
+// ═══════════════════════════════════════════════════════
+function resizeImage(file, maxPx=900) {
+  return new Promise(resolve => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      let {width:w, height:h} = img;
+      if (w > h) { if (w>maxPx) { h=h*maxPx/w; w=maxPx; } }
+      else        { if (h>maxPx) { w=w*maxPx/h; h=maxPx; } }
+      const c = document.createElement('canvas');
+      c.width=Math.round(w); c.height=Math.round(h);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg',0.75).split(',')[1]);
+    };
+    img.src = url;
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  GEMINI API
+// ═══════════════════════════════════════════════════════
+async function callGemini(parts) {
+  const {apiKey} = db.getObj('settings');
+  if (!apiKey) throw new Error('Geen API-key. Ga naar Instellingen.');
+  const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body: JSON.stringify({contents:[{parts}]}),
+  });
+  if (!res.ok) throw new Error(`Gemini fout (${res.status}) — controleer je API-key`);
+  return res.json().then(d => d.candidates[0].content.parts[0].text);
+}
+
+async function analyzeFood(base64) {
+  const text = await callGemini([
+    {inlineData:{mimeType:'image/jpeg',data:base64}},
+    {text:`Analyze this food image. Reply with ONLY raw JSON, no markdown:\n{"description":"food name in Dutch","calories":0,"protein":0,"carbs":0,"fat":0}`},
+  ]);
+  const m = text.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error('Kon voedingsdata niet lezen');
+  return JSON.parse(m[0]);
+}
+
+async function fetchAdvice() {
+  const food     = forToday(db.getArr('food'));
+  const training = forToday(db.getArr('training'));
+  const sleep    = db.getArr('sleep').find(s => s.date === todayStr());
+  const cal  = Math.round(food.reduce((s,e)=>s+e.calories,0));
+  const pro  = Math.round(food.reduce((s,e)=>s+e.protein, 0));
+  const car  = Math.round(food.reduce((s,e)=>s+e.carbs,   0));
+  const fat  = Math.round(food.reduce((s,e)=>s+e.fat,     0));
+  const trainDesc = training.length===0 ? 'Geen training' :
+    training.map(t => {
+      if (t.type==='strength')  return `Kracht (${t.exercises?.length??0} oefen.${t.duration?`, ${t.duration}min`:''})`;
+      if (t.type==='motocross') return `Motorcross (${t.duration??0}min, ${t.intensity})`;
+      return `${t.enduranceType} (${t.duration??0}min, ${t.distance??0}km)`;
+    }).join('; ');
+  const sleepDesc = sleep ? `${sleep.duration.toFixed(1)}u, kwaliteit ${sleep.quality}/5` : 'Niet gelogd';
+  return callGemini([{text:
+    `Je bent een persoonlijke fitnesscoach. Geef beknopt, actionabel advies in het Nederlands.
+
+VANDAAG:
+• Slaap: ${sleepDesc}
+• Voeding: ${cal} kcal — Eiwit ${pro}g / KH ${car}g / Vet ${fat}g (${food.length} maaltijden)
+• Training: ${trainDesc}
+
+Geef precies 4 bulletpunten (gebruik •):
+1. Herstelanalyse op basis van slaap
+2. Voedingsfeedback
+3. Trainingsnoot
+4. Eén concrete aanbeveling voor morgen
+
+Direct, persoonlijk, motiverend. Max 160 woorden.`}]);
+}
+
+// ═══════════════════════════════════════════════════════
+//  UI HELPERS
+// ═══════════════════════════════════════════════════════
+function showLoader(txt='Bezig…') {
+  document.getElementById('loader-text').textContent = txt;
+  document.getElementById('loader').classList.add('show');
+}
+function hideLoader() { document.getElementById('loader').classList.remove('show'); }
+function toast(msg) {
+  const el = Object.assign(document.createElement('div'), {textContent: msg});
+  Object.assign(el.style, {
+    position:'fixed', bottom:'110px', left:'50%', transform:'translateX(-50%) translateY(10px)',
+    background:'rgba(28,25,23,0.92)', color:'white', padding:'10px 20px',
+    borderRadius:'20px', fontSize:'14px', fontWeight:'600', zIndex:'400',
+    whiteSpace:'nowrap', backdropFilter:'blur(12px)',
+    transition:'opacity 300ms, transform 300ms',
+    fontFamily:"'Outfit', sans-serif",
+  });
+  document.body.appendChild(el);
+  requestAnimationFrame(() => { el.style.transform='translateX(-50%) translateY(0)'; });
+  setTimeout(() => { el.style.opacity='0'; setTimeout(()=>el.remove(), 300); }, 2200);
+}
+function openModal(title, html) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('overlay').classList.add('open');
+}
+function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+function overlayClick(e) { if (e.target===document.getElementById('overlay')) closeModal(); }
+
+// ═══════════════════════════════════════════════════════
+//  TAB SWITCHING
+// ═══════════════════════════════════════════════════════
+const TABS = ['dashboard','food','training','sleep','settings'];
+const RENDERS = {};
+function switchTab(tab) {
+  TABS.forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('active', t===tab);
+    document.getElementById(`nav-${t}`).classList.toggle('active', t===tab);
+  });
+  RENDERS[tab]?.();
+}
+
+// ═══════════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════════
+let dashAdvice = '';
+
+RENDERS.dashboard = function renderDashboard() {
+  document.getElementById('date-label').textContent =
+    new Date().toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'});
+
+  const food     = forToday(db.getArr('food'));
+  const training = forToday(db.getArr('training'));
+  const sleep    = db.getArr('sleep').find(s=>s.date===todayStr());
+  const {apiKey} = db.getObj('settings');
+
+  const cal = Math.round(food.reduce((s,e)=>s+e.calories,0));
+  const pro = Math.round(food.reduce((s,e)=>s+e.protein, 0));
+  const car = Math.round(food.reduce((s,e)=>s+e.carbs,   0));
+  const fat = Math.round(food.reduce((s,e)=>s+e.fat,     0));
+
+  const trainingHTML = training.length===0
+    ? '<p class="hint" style="text-align:left;padding:0">Nog niets gelogd vandaag</p>'
+    : training.map(t => {
+        const m = TYPE_META[t.type];
+        const detail = t.type==='strength'
+          ? `${t.exercises?.length??0} oefeningen${t.duration?` · ${t.duration} min`:''}`
+          : t.type==='motocross' ? `${t.duration??0} min · ${t.intensity}`
+          : `${t.enduranceType} · ${t.duration??0} min · ${t.distance??0} km`;
+        return `<div class="t-chip" style="color:${m.color};background:${m.bg};border-color:${m.bg}">
+          <span style="stroke:${m.color};display:flex">${m.icon}</span>
+          ${m.label} · <span style="font-weight:500">${detail}</span>
+        </div>`;
+      }).join('');
+
+  const sleepHTML = sleep
+    ? `<div class="sleep-stats">
+        <div class="sleep-stat"><div class="sleep-val">${sleep.duration.toFixed(1)}u</div><div class="sleep-lbl">Duur</div></div>
+        <div class="sleep-stat"><div class="sleep-val">${sleep.bedtime}</div><div class="sleep-lbl">Slaaptijd</div></div>
+        <div class="sleep-stat"><div class="sleep-val">${sleep.wakeTime}</div><div class="sleep-lbl">Wakker</div></div>
+      </div>
+      <div class="quality-badge" style="background:${QUALITY_COLORS[sleep.quality]}18;color:${QUALITY_COLORS[sleep.quality]}">
+        <span class="status-dot" style="background:${QUALITY_COLORS[sleep.quality]}"></span>
+        ${QUALITY_LABELS[sleep.quality]} — kwaliteit ${sleep.quality}/5
+      </div>`
+    : '<p class="hint" style="text-align:left;padding:0">Nog niets gelogd</p>';
+
+  const adviceHTML = dashAdvice
+    ? `<div class="advice-box"><p>${dashAdvice}</p></div>
+       <button class="refresh-btn" onclick="reloadAdvice()">${IC.refresh} Vernieuwen</button>`
+    : `<button class="btn btn-primary" onclick="reloadAdvice()">${IC.sparkle} Haal advies op</button>`;
+
+  document.getElementById('dashboard-content').innerHTML = `
+    ${!apiKey ? `<div class="warning">API-key ontbreekt — ga naar <b>Instellingen</b> om deze in te stellen.</div>` : ''}
+
+    <div class="card" style="animation:slide-up 260ms var(--ease-out)">
+      <div class="card-label">Voeding vandaag</div>
+      <div class="cal-hero">
+        <span class="cal-num">${cal.toLocaleString('nl-NL')}</span>
+        <span class="cal-unit">kcal</span>
+      </div>
+      <div class="macro-strip">
+        <div class="macro-cell"><span class="macro-val" style="color:#2563EB">${pro}g</span><span class="macro-key">Eiwit</span></div>
+        <div class="macro-cell"><span class="macro-val" style="color:#D97706">${car}g</span><span class="macro-key">Koolhydr.</span></div>
+        <div class="macro-cell"><span class="macro-val" style="color:#DC2626">${fat}g</span><span class="macro-key">Vet</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="animation:slide-up 260ms 50ms var(--ease-out) both">
+      <div class="card-label">Training</div>
+      ${trainingHTML}
+    </div>
+
+    <div class="card" style="animation:slide-up 260ms 100ms var(--ease-out) both">
+      <div class="card-label">Slaap</div>
+      ${sleepHTML}
+    </div>
+
+    <div class="card" style="animation:slide-up 260ms 150ms var(--ease-out) both">
+      <div class="card-label">AI Coach</div>
+      ${adviceHTML}
+    </div>`;
+};
+
+async function reloadAdvice() {
+  showLoader('Advies ophalen…');
+  try { dashAdvice = await fetchAdvice(); RENDERS.dashboard(); }
+  catch(e) { toast('Fout: ' + e.message); }
+  finally { hideLoader(); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  FOOD
+// ═══════════════════════════════════════════════════════
+RENDERS.food = function renderFood() {
+  const entries = forToday(db.getArr('food'));
+  const cal = Math.round(entries.reduce((s,e)=>s+e.calories,0));
+  const pro = Math.round(entries.reduce((s,e)=>s+e.protein, 0));
+  const car = Math.round(entries.reduce((s,e)=>s+e.carbs,   0));
+  const fat = Math.round(entries.reduce((s,e)=>s+e.fat,     0));
+
+  const emptyHTML = `
+    <div class="empty">
+      <div class="empty-ring">
+        <svg viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>
+      </div>
+      <h3>Nog niets gelogd</h3>
+      <p>Maak een foto van je maaltijd om te beginnen</p>
+    </div>`;
+
+  document.getElementById('food-content').innerHTML = `
+    <div class="card" style="animation:slide-up 260ms var(--ease-out)">
+      <div class="cal-hero" style="margin-bottom:12px">
+        <span class="cal-num" style="font-size:40px">${cal.toLocaleString('nl-NL')}</span>
+        <span class="cal-unit">kcal</span>
+      </div>
+      <div class="macro-strip">
+        <div class="macro-cell"><span class="macro-val" style="color:#2563EB">${pro}g</span><span class="macro-key">Eiwit</span></div>
+        <div class="macro-cell"><span class="macro-val" style="color:#D97706">${car}g</span><span class="macro-key">Koolhydr.</span></div>
+        <div class="macro-cell"><span class="macro-val" style="color:#DC2626">${fat}g</span><span class="macro-key">Vet</span></div>
+      </div>
+    </div>
+
+    <div class="btn-row" style="animation:slide-up 260ms 40ms var(--ease-out) both">
+      <button class="btn btn-primary" onclick="document.getElementById('inp-camera').click()">${IC.camera} Foto</button>
+      <button class="btn btn-surface" onclick="document.getElementById('inp-gallery').click()">${IC.gallery} Galerij</button>
+    </div>
+    <button class="btn btn-ghost" style="margin-bottom:20px;animation:slide-up 260ms 60ms var(--ease-out) both" onclick="openFoodSearch()">
+      ${IC.search} Zoeken / Barcode scannen
+    </button>
+
+    <div class="section-title" style="animation:slide-up 260ms 80ms var(--ease-out) both">Vandaag gegeten</div>
+    ${entries.length===0 ? emptyHTML : entries.map(e => `
+      <div class="entry">
+        <div class="entry-body">
+          <div class="entry-title">${e.description}</div>
+          <div class="entry-time">${new Date(e.timestamp).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}</div>
+          <div class="pills">
+            <span class="pill">${Math.round(e.calories)} kcal</span>
+            <span class="pill" style="background:var(--blue-dim);color:#1D4ED8">E ${Math.round(e.protein)}g</span>
+            <span class="pill" style="background:var(--amber-dim);color:#92400E">K ${Math.round(e.carbs)}g</span>
+            <span class="pill" style="background:var(--red-dim);color:#991B1B">V ${Math.round(e.fat)}g</span>
+          </div>
+        </div>
+        <button class="del-btn" onclick="deleteFood('${e.id}')">${IC.trash}</button>
+      </div>`).join('')}`;
+};
+
+function deleteFood(id) {
+  if (!confirm('Verwijder deze maaltijd?')) return;
+  db.remove('food', id); RENDERS.food();
+}
+
+async function handleFoodFile(file) {
+  if (!file) return;
+  showLoader('Maaltijd analyseren…');
+  try {
+    const base64 = await resizeImage(file);
+    const info   = await analyzeFood(base64);
+    db.push('food', {id:uid(), timestamp:new Date().toISOString(), date:todayStr(), ...info});
+    RENDERS.food(); toast('Maaltijd opgeslagen');
+  } catch(e) { toast('Fout: ' + e.message); }
+  finally { hideLoader(); }
+}
+
+document.getElementById('inp-camera').addEventListener('change',  e => handleFoodFile(e.target.files[0]));
+document.getElementById('inp-gallery').addEventListener('change', e => handleFoodFile(e.target.files[0]));
+
+// ═══════════════════════════════════════════════════════
+//  FOOD DATABASE (Open Food Facts)
+// ═══════════════════════════════════════════════════════
+const OFF_SEARCH_URL  = 'https://world.openfoodfacts.org/cgi/search.pl';
+const OFF_BARCODE_URL = 'https://world.openfoodfacts.org/api/v0/product';
+
+let _dbResults   = [];   // last search results
+let _portionProd = null; // product currently being portioned
+
+function normOFF(p) {
+  const n = p.nutriments || {};
+  const kcal = n['energy-kcal_100g'] ?? (n['energy_100g'] ? n['energy_100g'] / 4.184 : 0);
+  return {
+    name:         (p.product_name || p.generic_name || '').trim() || 'Onbekend product',
+    brand:        (p.brands || '').split(',')[0].trim(),
+    per100: {
+      calories: Math.round(kcal),
+      protein:  Math.round((n.proteins_100g       || 0) * 10) / 10,
+      carbs:    Math.round((n.carbohydrates_100g   || 0) * 10) / 10,
+      fat:      Math.round((n.fat_100g             || 0) * 10) / 10,
+    },
+    servingQty:   p.serving_quantity ? parseFloat(p.serving_quantity) : null,
+    servingLabel: p.serving_size || null,
+  };
+}
+
+async function searchOFF(query) {
+  const params = new URLSearchParams({
+    search_terms: query, search_simple: '1', action: 'process', json: '1',
+    fields: 'product_name,generic_name,brands,nutriments,serving_size,serving_quantity',
+    page_size: '12', lc: 'nl', cc: 'nl',
+  });
+  const res  = await fetch(`${OFF_SEARCH_URL}?${params}`);
+  const data = await res.json();
+  return (data.products || [])
+    .filter(p => (p.product_name || p.generic_name) && (p.nutriments?.['energy-kcal_100g'] ?? 0) > 0)
+    .slice(0, 8)
+    .map(normOFF);
+}
+
+async function barcodeToProduct(code) {
+  const res  = await fetch(`${OFF_BARCODE_URL}/${code}.json`);
+  const data = await res.json();
+  if (data.status !== 1 || !data.product) throw new Error('Product niet gevonden in database');
+  return normOFF(data.product);
+}
+
+// ── Search modal ─────────────────────────────────────────
+function openFoodSearch() {
+  _dbResults = [];
+  openModal('Voedsel zoeken', buildSearchHTML());
+}
+
+function buildSearchHTML() {
+  return `
+    <div style="display:flex;gap:8px;align-items:center">
+      <input class="inp" id="db-q" placeholder="Zoek product op naam…" style="flex:1"
+             oninput="dbDebounce()" onkeydown="if(event.key==='Enter'){clearTimeout(_dbTimer);doSearch()}">
+      <button class="btn btn-primary" style="width:auto;padding:13px 16px;flex-shrink:0" onclick="doSearch()">
+        ${IC.search}
+      </button>
+    </div>
+
+    <div class="db-sep"><span>of</span></div>
+
+    <button class="btn btn-surface" onclick="document.getElementById('inp-barcode').click()">
+      ${IC.barcode} Foto van barcode
+    </button>
+
+    <div id="db-results" style="margin-top:20px"></div>
+
+    <div class="db-sep"><span>of</span></div>
+
+    <button class="btn btn-ghost" onclick="openManualEntry()">${IC.pencil} Handmatig invoeren</button>
+  `;
+}
+
+let _dbTimer = null;
+function dbDebounce() { clearTimeout(_dbTimer); _dbTimer = setTimeout(doSearch, 600); }
+
+async function doSearch() {
+  const q = (document.getElementById('db-q')?.value || '').trim();
+  if (q.length < 2) return;
+  const el = document.getElementById('db-results');
+  if (!el) return;
+  el.innerHTML = `<div class="db-msg">Zoeken…</div>`;
+  try {
+    _dbResults = await searchOFF(q);
+    renderDBResults();
+  } catch(e) {
+    el.innerHTML = `<div class="db-msg">Fout: ${e.message}</div>`;
+  }
+}
+
+function renderDBResults() {
+  const el = document.getElementById('db-results');
+  if (!el) return;
+  if (_dbResults.length === 0) {
+    el.innerHTML = `<div class="db-msg">Geen resultaten gevonden. Probeer een andere zoekterm of voer handmatig in.</div>`;
+    return;
+  }
+  el.innerHTML = _dbResults.map((p, i) => `
+    <div class="db-row" onclick="openPortionPicker(${i})">
+      <div class="db-row-body">
+        <div class="db-row-name">${p.name}</div>
+        <div class="db-row-sub">${p.brand ? p.brand + ' · ' : ''}${p.per100.calories} kcal · E ${p.per100.protein}g K ${p.per100.carbs}g V ${p.per100.fat}g <span style="opacity:0.6">(per 100g)</span></div>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>`).join('');
+}
+
+// ── Barcode scan (photo → html5-qrcode decode → OFF lookup) ──
+async function handleBarcodePhoto(file) {
+  if (!file) return;
+  if (typeof Html5Qrcode === 'undefined') {
+    toast('Barcode-decoder niet geladen, probeer tekst zoeken'); return;
+  }
+  showLoader('Barcode lezen…');
+  try {
+    const tmpId = 'barcode-tmp-' + uid();
+    const tmp   = document.createElement('div');
+    tmp.id = tmpId; tmp.style.display = 'none';
+    document.body.appendChild(tmp);
+
+    const reader = new Html5Qrcode(tmpId, { verbose: false });
+    let code;
+    try {
+      code = await reader.scanFile(file, false);
+    } finally {
+      reader.clear();
+      tmp.remove();
+    }
+
+    const digits = code.replace(/\D/g, '');
+    if (digits.length < 8) throw new Error('Geen geldige barcode herkend');
+
+    const product = await barcodeToProduct(digits);
+    _dbResults  = [product];
+    _portionProd = product;
+
+    // If search modal is already open, show in results — otherwise open portion picker directly
+    const resultsEl = document.getElementById('db-results');
+    if (resultsEl) {
+      renderDBResults();
+    } else {
+      openModal(product.name, buildPortionPickerHTML(product));
+      updatePortionPreview();
+    }
+  } catch(e) {
+    toast('Fout: ' + e.message);
+  } finally {
+    hideLoader();
+    document.getElementById('inp-barcode').value = '';
+  }
+}
+
+document.getElementById('inp-barcode').addEventListener('change', e => handleBarcodePhoto(e.target.files[0]));
+
+// ── Portion picker ───────────────────────────────────────
+function buildPortionPickerHTML(p) {
+  const servings = [];
+  if (p.servingQty && p.servingQty > 0) {
+    const qty = Math.round(p.servingQty);
+    servings.push({ grams: qty,     label: `1 portie (${qty}g)${p.servingLabel ? ' — ' + p.servingLabel : ''}` });
+    servings.push({ grams: qty * 2, label: `2 porties (${qty * 2}g)` });
+  }
+  servings.push({ grams: 100, label: '100g' });
+  const defaultGrams = (p.servingQty && p.servingQty > 0) ? Math.round(p.servingQty) : 100;
+
+  return `
+    <div style="margin-bottom:16px">
+      ${p.brand ? `<p style="font-size:13px;color:var(--muted);margin-bottom:10px">${p.brand}</p>` : ''}
+      <div class="macro-strip">
+        <div class="macro-cell">
+          <span class="macro-val" style="font-size:15px;color:var(--text)">${p.per100.calories}</span>
+          <span class="macro-key">kcal/100g</span>
+        </div>
+        <div class="macro-cell">
+          <span class="macro-val" style="font-size:15px;color:#2563EB">${p.per100.protein}g</span>
+          <span class="macro-key">Eiwit</span>
+        </div>
+        <div class="macro-cell">
+          <span class="macro-val" style="font-size:15px;color:#D97706">${p.per100.carbs}g</span>
+          <span class="macro-key">Koolhydr.</span>
+        </div>
+      </div>
+    </div>
+
+    <label class="lbl">Portiegrootte</label>
+    <div class="chips" style="margin-bottom:14px">
+      ${servings.map((s, i) => `
+        <button class="chip portion-chip${i === 0 ? ' on' : ''}"
+          style="${i === 0 ? 'background:var(--accent);border-color:var(--accent);color:white' : ''}"
+          onclick="setPortion(${s.grams}, this)">${s.label}</button>`).join('')}
+    </div>
+
+    <label class="lbl">Of exact gewicht (gram)</label>
+    <input class="inp" id="portion-g" type="number" inputmode="decimal"
+           value="${defaultGrams}" placeholder="100" oninput="updatePortionPreview()">
+
+    <div id="portion-preview" style="margin-top:12px"></div>
+
+    <div style="margin-top:20px;display:grid;grid-template-columns:auto 1fr;gap:10px">
+      <button class="btn btn-surface" style="width:auto;padding:13px 18px" onclick="backToSearch()">← Terug</button>
+      <button class="btn btn-primary" onclick="addFromDB()">${IC.plus} Toevoegen</button>
+    </div>`;
+}
+
+function openPortionPicker(idx) {
+  _portionProd = _dbResults[idx];
+  if (!_portionProd) return;
+  document.getElementById('modal-title').textContent = _portionProd.name;
+  document.getElementById('modal-body').innerHTML = buildPortionPickerHTML(_portionProd);
+  updatePortionPreview();
+}
+
+function setPortion(grams, btn) {
+  const inp = document.getElementById('portion-g');
+  if (inp) inp.value = grams;
+  document.querySelectorAll('.portion-chip').forEach(c => {
+    c.classList.remove('on');
+    c.style.background = ''; c.style.borderColor = ''; c.style.color = '';
+  });
+  if (btn) {
+    btn.classList.add('on');
+    btn.style.background    = 'var(--accent)';
+    btn.style.borderColor   = 'var(--accent)';
+    btn.style.color         = 'white';
+  }
+  updatePortionPreview();
+}
+
+function updatePortionPreview() {
+  const p = _portionProd; if (!p) return;
+  const grams = parseFloat(document.getElementById('portion-g')?.value) || 0;
+  const f   = grams / 100;
+  const cal = Math.round(p.per100.calories * f);
+  const pro = Math.round(p.per100.protein  * f * 10) / 10;
+  const car = Math.round(p.per100.carbs    * f * 10) / 10;
+  const fat = Math.round(p.per100.fat      * f * 10) / 10;
+  const el  = document.getElementById('portion-preview');
+  if (el) el.innerHTML = `
+    <div class="dur-preview">
+      ${IC.sparkle}
+      <span>${grams}g — <strong>${cal} kcal</strong> · E ${pro}g K ${car}g V ${fat}g</span>
+    </div>`;
+}
+
+function backToSearch() {
+  document.getElementById('modal-title').textContent = 'Voedsel zoeken';
+  document.getElementById('modal-body').innerHTML = buildSearchHTML();
+  if (_dbResults.length > 0) renderDBResults();
+}
+
+function addFromDB() {
+  const p = _portionProd; if (!p) return;
+  const grams = parseFloat(document.getElementById('portion-g')?.value) || 100;
+  const f = grams / 100;
+  db.push('food', {
+    id:          uid(),
+    timestamp:   new Date().toISOString(),
+    date:        todayStr(),
+    description: `${p.name}${grams !== 100 ? ` (${grams}g)` : ''}`,
+    calories:    Math.round(p.per100.calories * f),
+    protein:     Math.round(p.per100.protein  * f * 10) / 10,
+    carbs:       Math.round(p.per100.carbs    * f * 10) / 10,
+    fat:         Math.round(p.per100.fat      * f * 10) / 10,
+  });
+  closeModal(); RENDERS.food(); toast('Toegevoegd aan log');
+}
+
+// ── Manual entry ─────────────────────────────────────────
+function openManualEntry() {
+  openModal('Handmatig invoeren', `
+    <label class="lbl">Naam</label>
+    <input class="inp" id="m-name" placeholder="Bijv. Appel, Havermout…">
+    <label class="lbl">Calorieën (kcal)</label>
+    <input class="inp" id="m-cal" type="number" inputmode="numeric" placeholder="0">
+    <label class="lbl">Eiwit (g)</label>
+    <input class="inp" id="m-pro" type="number" inputmode="decimal" placeholder="0">
+    <label class="lbl">Koolhydraten (g)</label>
+    <input class="inp" id="m-car" type="number" inputmode="decimal" placeholder="0">
+    <label class="lbl">Vet (g)</label>
+    <input class="inp" id="m-fat" type="number" inputmode="decimal" placeholder="0">
+    <div style="margin-top:20px">
+      <button class="btn btn-primary" onclick="saveManualEntry()">Opslaan</button>
+    </div>`);
+}
+
+function saveManualEntry() {
+  const name = document.getElementById('m-name')?.value?.trim();
+  if (!name) { toast('Vul een naam in'); return; }
+  db.push('food', {
+    id:          uid(),
+    timestamp:   new Date().toISOString(),
+    date:        todayStr(),
+    description: name,
+    calories:    parseFloat(document.getElementById('m-cal')?.value)  || 0,
+    protein:     parseFloat(document.getElementById('m-pro')?.value)  || 0,
+    carbs:       parseFloat(document.getElementById('m-car')?.value)  || 0,
+    fat:         parseFloat(document.getElementById('m-fat')?.value)  || 0,
+  });
+  closeModal(); RENDERS.food(); toast('Toegevoegd');
+}
+
+// ═══════════════════════════════════════════════════════
+//  TRAINING
+// ═══════════════════════════════════════════════════════
+let tF = {type:'strength',duration:'',intensity:'medium',enduranceType:'run',distance:'',notes:'',
+           exercises:[{name:'',sets:[{reps:'',weight:''}]}]};
+
+RENDERS.training = function renderTraining() {
+  const entries = forToday(db.getArr('training'));
+
+  const emptyHTML = `
+    <div class="empty">
+      <div class="empty-ring">
+        <svg viewBox="0 0 24 24"><line x1="6" y1="5" x2="6" y2="19"/><line x1="18" y1="5" x2="18" y2="19"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="6" y1="7" x2="10" y2="7"/><line x1="6" y1="17" x2="10" y2="17"/><line x1="14" y1="7" x2="18" y2="7"/><line x1="14" y1="17" x2="18" y2="17"/></svg>
+      </div>
+      <h3>Geen training gelogd</h3>
+      <p>Log je eerste sessie van vandaag</p>
+    </div>`;
+
+  document.getElementById('training-content').innerHTML = `
+    <button class="btn btn-primary" style="margin-bottom:20px;animation:slide-up 260ms var(--ease-out)" onclick="openTrainingModal()">
+      ${IC.plus} Training loggen
+    </button>
+    <div class="section-title">Vandaag</div>
+    ${entries.length===0 ? emptyHTML : entries.map((e,i) => {
+      const m = TYPE_META[e.type];
+      const detail = e.type==='strength'
+        ? `${e.exercises?.length??0} oefeningen${e.duration?` · ${e.duration} min`:''}`
+        : e.type==='motocross' ? `${e.duration??0} min · intensiteit: ${e.intensity}`
+        : `${e.enduranceType} · ${e.duration??0} min · ${e.distance??0} km`;
+      return `<div class="t-entry" style="border-left-color:${m.color};animation-delay:${i*40}ms">
+        <div class="t-type-icon" style="background:${m.bg};stroke:${m.color}">${m.icon}</div>
+        <div class="t-info">
+          <div class="t-name">${m.label}</div>
+          <div class="t-detail">${detail}</div>
+          ${e.notes?`<div class="t-note">${e.notes}</div>`:''}
+        </div>
+        <button class="del-btn" onclick="deleteTraining('${e.id}')">${IC.trash}</button>
+      </div>`;
+    }).join('')}`;
+};
+
+function deleteTraining(id) {
+  if (!confirm('Verwijder deze training?')) return;
+  db.remove('training',id); RENDERS.training();
+}
+
+function openTrainingModal() {
+  tF = {type:'strength',duration:'',intensity:'medium',enduranceType:'run',distance:'',notes:'',
+        exercises:[{name:'',sets:[{reps:'',weight:''}]}]};
+  openModal('Training loggen', buildTForm());
+}
+
+function buildTForm() {
+  const typeChips = Object.entries(TYPE_META).map(([key,m]) =>
+    `<button class="chip${tF.type===key?' on':''}" style="${tF.type===key?`background:${m.color};border-color:${m.color}`:''}" onclick="setTType('${key}')">${m.label}</button>`
+  ).join('');
+
+  let specific = '';
+  if (tF.type==='strength') {
+    specific = tF.exercises.map((ex,ei) => `
+      <div class="ex-block">
+        <div class="ex-hdr">
+          <input class="inp" style="flex:1;background:white" placeholder="Naam oefening (bijv. Squat)" value="${ex.name}" oninput="tF.exercises[${ei}].name=this.value">
+          ${tF.exercises.length>1?`<button class="rm-ex-btn" onclick="rmEx(${ei})">${IC.trash}</button>`:''}
+        </div>
+        <div class="set-header"><span></span><span>Reps</span><span>kg</span></div>
+        ${ex.sets.map((s,si)=>`
+          <div class="set-row">
+            <span class="set-num">${si+1}</span>
+            <input class="set-inp" type="number" inputmode="numeric" placeholder="—" value="${s.reps}" oninput="tF.exercises[${ei}].sets[${si}].reps=this.value">
+            <input class="set-inp" type="number" inputmode="decimal" placeholder="—" value="${s.weight}" oninput="tF.exercises[${ei}].sets[${si}].weight=this.value">
+          </div>`).join('')}
+        <button class="add-set-btn" onclick="addSet(${ei})">+ Set toevoegen</button>
+      </div>`).join('')
+      + `<button class="add-ex-btn" onclick="addEx()">+ Oefening toevoegen</button>`;
+  } else if (tF.type==='motocross') {
+    specific = `<label class="lbl">Intensiteit</label><div class="chips">${
+      ['low','medium','high'].map(i=>`<button class="chip${tF.intensity===i?' on':''}" style="${tF.intensity===i?'background:#DC2626;border-color:#DC2626':''}" onclick="setIntensity('${i}')">${i==='low'?'Laag':i==='medium'?'Gemiddeld':'Hoog'}</button>`).join('')
+    }</div>`;
+  } else {
+    specific = `<label class="lbl">Activiteit</label><div class="chips">${
+      [['run','Lopen'],['bike','Fietsen'],['swim','Zwemmen']].map(([k,l])=>
+        `<button class="chip${tF.enduranceType===k?' on':''}" style="${tF.enduranceType===k?'background:#16A34A;border-color:#16A34A':''}" onclick="setET('${k}')">${l}</button>`).join('')
+    }</div>
+    <label class="lbl">Afstand (km)</label>
+    <input class="inp" type="number" inputmode="decimal" placeholder="bijv. 10.5" value="${tF.distance}" oninput="tF.distance=this.value">`;
+  }
+
+  return `
+    <label class="lbl">Type training</label>
+    <div class="chips" style="flex-wrap:nowrap">${typeChips}</div>
+    <label class="lbl">Duur (minuten)</label>
+    <input class="inp" type="number" inputmode="numeric" placeholder="bijv. 60" value="${tF.duration}" oninput="tF.duration=this.value">
+    ${specific}
+    <label class="lbl">Notities</label>
+    <textarea class="inp" placeholder="Hoe voelde het?" oninput="tF.notes=this.value">${tF.notes}</textarea>
+    <div style="margin-top:20px"><button class="btn btn-primary" onclick="saveTraining()">Opslaan</button></div>`;
+}
+
+const rebuildTForm = () => { document.getElementById('modal-body').innerHTML = buildTForm(); };
+function setTType(t)    { tF.type=t;            rebuildTForm(); }
+function setIntensity(i){ tF.intensity=i;        rebuildTForm(); }
+function setET(t)       { tF.enduranceType=t;    rebuildTForm(); }
+function addEx()        { tF.exercises.push({name:'',sets:[{reps:'',weight:''}]}); rebuildTForm(); }
+function rmEx(i)        { tF.exercises.splice(i,1); rebuildTForm(); }
+function addSet(ei)     { tF.exercises[ei].sets.push({reps:'',weight:''}); rebuildTForm(); }
+
+function saveTraining() {
+  const entry = {
+    id:uid(), timestamp:new Date().toISOString(), date:todayStr(), type:tF.type,
+    duration:tF.duration?parseInt(tF.duration):undefined,
+    notes:tF.notes||undefined,
+    exercises:tF.type==='strength'?tF.exercises.filter(e=>e.name.trim()):undefined,
+    intensity:tF.type==='motocross'?tF.intensity:undefined,
+    enduranceType:tF.type==='endurance'?tF.enduranceType:undefined,
+    distance:tF.type==='endurance'&&tF.distance?parseFloat(tF.distance):undefined,
+  };
+  db.push('training',entry); closeModal(); RENDERS.training(); toast('Training opgeslagen');
+}
+
+// ═══════════════════════════════════════════════════════
+//  SLEEP
+// ═══════════════════════════════════════════════════════
+let sF = {bedtime:'22:30',wakeTime:'06:30',quality:3,editing:false};
+
+RENDERS.sleep = function renderSleep() {
+  const all     = db.getArr('sleep');
+  const today   = all.find(s=>s.date===todayStr());
+  const history = all.filter(s=>s.date!==todayStr()).slice(0,7);
+
+  let html = '';
+
+  if (today && !sF.editing) {
+    html += `
+      <div class="card" style="animation:slide-up 260ms var(--ease-out)">
+        <div class="card-row">
+          <div class="card-label" style="margin:0">Afgelopen nacht</div>
+          <button class="edit-link" onclick="startEditSleep()">${IC.pencil} Bewerken</button>
+        </div>
+        <div class="sleep-stats">
+          <div class="sleep-stat"><div class="sleep-val">${today.duration.toFixed(1)}u</div><div class="sleep-lbl">Duur</div></div>
+          <div class="sleep-stat"><div class="sleep-val">${today.bedtime}</div><div class="sleep-lbl">Slaaptijd</div></div>
+          <div class="sleep-stat"><div class="sleep-val">${today.wakeTime}</div><div class="sleep-lbl">Wakker</div></div>
+        </div>
+        <div class="quality-badge" style="background:${QUALITY_COLORS[today.quality]}18;color:${QUALITY_COLORS[today.quality]}">
+          <span class="status-dot" style="background:${QUALITY_COLORS[today.quality]}"></span>
+          ${QUALITY_LABELS[today.quality]} — ${today.quality}/5
+        </div>
+      </div>`;
+  } else {
+    const dur = isTime(sF.bedtime)&&isTime(sF.wakeTime) ? calcDuration(sF.bedtime,sF.wakeTime) : null;
+    const qBtns = [1,2,3,4,5].map(q =>
+      `<button class="q-btn${sF.quality===q?' on':''}" style="${sF.quality===q?`background:${QUALITY_COLORS[q]};border-color:${QUALITY_COLORS[q]}`:''}" onclick="setQ(${q})">${q}</button>`
+    ).join('');
+    html += `
+      <div class="card" style="animation:slide-up 260ms var(--ease-out)">
+        <div class="card-label">${sF.editing?'Bewerken':'Slaap loggen'}</div>
+        <label class="lbl">Slaaptijd (UU:MM)</label>
+        <input class="inp" id="inp-bed" value="${sF.bedtime}" placeholder="22:30" maxlength="5" oninput="sF.bedtime=this.value;updDur()">
+        <label class="lbl">Wektijd (UU:MM)</label>
+        <input class="inp" id="inp-wake" value="${sF.wakeTime}" placeholder="06:30" maxlength="5" oninput="sF.wakeTime=this.value;updDur()">
+        ${dur&&dur>0?`<div class="dur-preview">${IC.moon} ${dur.toFixed(1)} uur slaap</div>`:'<div id="dur-ph"></div>'}
+        <label class="lbl">Slaapkwaliteit</label>
+        <div class="q-row">${qBtns}</div>
+        <div class="q-label">${QUALITY_LABELS[sF.quality]}</div>
+        <div class="btn-row" style="margin-top:20px">
+          ${sF.editing?`<button class="btn btn-surface" onclick="cancelEdit()">Annuleren</button>`:'<div></div>'}
+          <button class="btn btn-primary" onclick="saveSleep()">Opslaan</button>
+        </div>
+      </div>`;
+  }
+
+  if (history.length>0) {
+    html += `<div class="section-title">Geschiedenis</div>`;
+    html += history.map((s,i) => `
+      <div class="h-row" style="animation-delay:${i*40}ms">
+        <div><div class="h-date">${s.date}</div><div class="h-time">${s.bedtime} → ${s.wakeTime}</div></div>
+        <div class="h-right"><div class="h-dur">${s.duration.toFixed(1)}u</div><div class="q-dot" style="background:${QUALITY_COLORS[s.quality]}"></div></div>
+      </div>`).join('');
+  }
+
+  document.getElementById('sleep-content').innerHTML = html;
+};
+
+function setQ(q) { sF.quality=q; RENDERS.sleep(); }
+function startEditSleep() { sF.editing=true; RENDERS.sleep(); }
+function cancelEdit() { sF.editing=false; RENDERS.sleep(); }
+
+function updDur() {
+  const b=document.getElementById('inp-bed')?.value;
+  const w=document.getElementById('inp-wake')?.value;
+  const ph=document.getElementById('dur-ph');
+  if (!ph) return;
+  if (b&&w&&isTime(b)&&isTime(w)) {
+    const d=calcDuration(b,w);
+    ph.outerHTML=`<div class="dur-preview" id="dur-ph">${IC.moon} ${d.toFixed(1)} uur slaap</div>`;
+  }
+}
+
+function saveSleep() {
+  const b=document.getElementById('inp-bed')?.value||sF.bedtime;
+  const w=document.getElementById('inp-wake')?.value||sF.wakeTime;
+  if (!isTime(b)||!isTime(w)) { toast('Gebruik UU:MM formaat'); return; }
+  const dur=calcDuration(b,w);
+  if (dur<=0||dur>16) { toast('Controleer de tijden'); return; }
+  const arr=db.getArr('sleep').filter(s=>s.date!==todayStr());
+  arr.unshift({id:uid(),date:todayStr(),bedtime:b,wakeTime:w,duration:dur,quality:sF.quality});
+  db.set('sleep',arr); sF.editing=false; RENDERS.sleep(); toast('Slaap opgeslagen');
+}
+
+// ═══════════════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════════════
+RENDERS.settings = function renderSettings() {
+  const {apiKey=''} = db.getObj('settings');
+  document.getElementById('settings-content').innerHTML = `
+    <div class="card" style="animation:slide-up 260ms var(--ease-out)">
+      <div class="card-label">Gemini API-key</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">
+        Haal je gratis sleutel op via
+        <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a>
+      </p>
+      <input class="inp" id="inp-key" type="password" placeholder="AIzaSy…" value="${apiKey}">
+      ${apiKey?`<p style="margin-top:10px;font-size:13px;color:var(--green);font-weight:600">API-key is ingesteld</p>`:''}
+      <button class="btn btn-primary" style="margin-top:14px" onclick="saveSettings()">Opslaan</button>
+    </div>
+
+    <div class="card" style="animation:slide-up 260ms 50ms var(--ease-out) both">
+      <div class="card-label">Toevoegen aan beginscherm</div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.65">
+        Open in <strong>Safari</strong> → tik op het deel-icoon → kies <strong>"Zet op beginscherm"</strong>
+      </p>
+    </div>
+
+    <div class="card" style="animation:slide-up 260ms 100ms var(--ease-out) both">
+      <div class="card-label">Opgeslagen data</div>
+      <div class="s-row"><span>Maaltijden</span><span>${db.getArr('food').length}</span></div>
+      <div class="s-row"><span>Trainingen</span><span>${db.getArr('training').length}</span></div>
+      <div class="s-row"><span>Slaapdagen</span><span>${db.getArr('sleep').length}</span></div>
+      <button class="btn btn-danger" style="margin-top:14px" onclick="clearAll()">Alle data wissen</button>
+    </div>`;
+};
+
+function saveSettings() {
+  db.set('settings',{apiKey:document.getElementById('inp-key').value.trim()});
+  RENDERS.settings(); toast('Opgeslagen');
+}
+function clearAll() {
+  if (!confirm('Alle data wissen? Dit kan niet ongedaan worden gemaakt.')) return;
+  ['food','training','sleep'].forEach(k=>db.set(k,[]));
+  dashAdvice=''; RENDERS.settings(); toast('Data gewist');
+}
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+RENDERS.dashboard();
+</script>
+</body>
+</html>
