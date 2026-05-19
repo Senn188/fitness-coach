@@ -530,6 +530,28 @@
     .db-row-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .db-row-sub  { font-size: 12px; color: var(--subtle); margin-top: 2px; }
     .db-msg { text-align: center; padding: 24px 16px; font-size: 14px; color: var(--muted); }
+
+    /* ── Exercise picker ────────────────────────────────── */
+    .ex-pick-wrap {
+      border: 1px solid var(--border); border-radius: 12px;
+      overflow: hidden; margin-top: 10px;
+    }
+    .ex-pick-item {
+      padding: 12px 14px; border-bottom: 1px solid var(--border-soft);
+      cursor: pointer; display: flex; flex-direction: column;
+      transition: background 140ms var(--ease-out);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ex-pick-item:last-child { border-bottom: none; }
+    .ex-pick-item:active { background: var(--border-soft); }
+    .ex-pick-name { font-size: 14px; font-weight: 600; color: var(--text); }
+    .ex-pick-muscles { font-size: 12px; color: var(--subtle); margin-top: 2px; }
+    .ex-selected {
+      background: var(--bg); border-radius: 12px; padding: 10px 12px;
+      border: 1.5px solid var(--border); flex: 1; min-width: 0;
+    }
+    .ex-selected-name { font-size: 14px; font-weight: 700; color: var(--text); }
+    .ex-selected-muscles { font-size: 12px; color: var(--subtle); margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -648,6 +670,15 @@ const IC = {
   search:  `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
   barcode: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="2" height="16"/><rect x="6" y="4" width="1" height="16"/><rect x="9" y="4" width="2" height="16"/><rect x="13" y="4" width="1" height="16"/><rect x="16" y="4" width="3" height="16"/><rect x="21" y="4" width="1" height="16"/></svg>`,
 };
+
+// ── wger exercise database ───────────────────────────
+const WGER_BASE = 'https://wger.de/api/v2';
+const WGER_CATS = [
+  {id:11, nl:'Borst'},  {id:12, nl:'Rug'},    {id:13, nl:'Schouders'},
+  {id:8,  nl:'Armen'},  {id:9,  nl:'Benen'},   {id:10, nl:'Buik'},
+  {id:14, nl:'Kuiten'}, {id:15, nl:'Cardio'},
+];
+const _wgerCache = {};
 
 // ═══════════════════════════════════════════════════════
 //  STORAGE
@@ -1270,8 +1301,8 @@ function saveManualEntry() {
 // ═══════════════════════════════════════════════════════
 //  TRAINING
 // ═══════════════════════════════════════════════════════
-let tF = {type:'strength',duration:'',intensity:'medium',enduranceType:'run',distance:'',notes:'',
-           exercises:[{name:'',sets:[{reps:'',weight:''}]}]};
+const _mkEx = () => ({name:'',wgerId:null,muscleStr:'',sets:[{reps:'',weight:''}],_picking:false,_catId:null,_catExercises:[],_loading:false,_filter:''});
+let tF = {type:'strength',duration:'',intensity:'medium',enduranceType:'run',distance:'',notes:'',exercises:[_mkEx()]};
 
 RENDERS.training = function renderTraining() {
   const entries = forToday(db.getArr('training'));
@@ -1314,8 +1345,7 @@ function deleteTraining(id) {
 }
 
 function openTrainingModal() {
-  tF = {type:'strength',duration:'',intensity:'medium',enduranceType:'run',distance:'',notes:'',
-        exercises:[{name:'',sets:[{reps:'',weight:''}]}]};
+  tF = {type:'strength',duration:'',intensity:'medium',enduranceType:'run',distance:'',notes:'',exercises:[_mkEx()]};
   openModal('Training loggen', buildTForm());
 }
 
@@ -1326,12 +1356,70 @@ function buildTForm() {
 
   let specific = '';
   if (tF.type==='strength') {
-    specific = tF.exercises.map((ex,ei) => `
-      <div class="ex-block">
-        <div class="ex-hdr">
-          <input class="inp" style="flex:1;background:white" placeholder="Naam oefening (bijv. Squat)" value="${ex.name}" oninput="tF.exercises[${ei}].name=this.value">
-          ${tF.exercises.length>1?`<button class="rm-ex-btn" onclick="rmEx(${ei})">${IC.trash}</button>`:''}
-        </div>
+    specific = tF.exercises.map((ex,ei) => {
+      // ── Exercise picker UI ──
+      let pickerHTML = '';
+      if (ex._picking) {
+        const catChips = WGER_CATS.map(c =>
+          `<button class="chip${ex._catId===c.id?' on':''}"
+            style="${ex._catId===c.id?'background:var(--accent);border-color:var(--accent);color:white':''}"
+            onclick="loadCatExercises(${ei},${c.id})">${c.nl}</button>`
+        ).join('');
+
+        let listHTML = '';
+        if (ex._loading) {
+          listHTML = `<div class="db-msg" style="padding:16px">Laden…</div>`;
+        } else if (ex._catExercises.length > 0) {
+          const filtered = ex._filter
+            ? ex._catExercises.filter(e => e.name.toLowerCase().includes(ex._filter))
+            : ex._catExercises;
+          listHTML = `
+            <input class="inp" style="margin:8px 0 6px;font-size:13px" placeholder="Filteren…"
+              value="${ex._filter}"
+              oninput="tF.exercises[${ei}]._filter=this.value.toLowerCase();rebuildExList(${ei})">
+            <div class="ex-pick-wrap" id="ex-list-${ei}">
+              ${filtered.map((e,xi) => `
+                <div class="ex-pick-item" onclick="chooseExercise(${ei},${xi})">
+                  <div class="ex-pick-name">${e.name}</div>
+                  ${e.muscles?`<div class="ex-pick-muscles">${e.muscles}</div>`:''}
+                </div>`).join('')}
+            </div>`;
+        }
+
+        pickerHTML = `
+          <div>
+            <label class="lbl" style="margin-top:4px">Categorie</label>
+            <div class="chips" style="flex-wrap:wrap">${catChips}</div>
+            ${listHTML}
+            <div style="margin-top:10px;display:flex;gap:6px;align-items:center">
+              <input class="inp" id="custom-ex-${ei}" placeholder="Of typ naam zelf…" style="flex:1;font-size:13px">
+              <button class="btn btn-ghost" style="width:auto;padding:11px 14px;font-size:13px" onclick="useCustomEx(${ei})">OK</button>
+            </div>
+          </div>`;
+      }
+
+      // ── Header row (selected / picking / empty) ──
+      let hdrHTML;
+      if (ex.name && !ex._picking) {
+        hdrHTML = `
+          <div class="ex-selected">
+            <div class="ex-selected-name">${ex.name}</div>
+            ${ex.muscleStr?`<div class="ex-selected-muscles">${ex.muscleStr}</div>`:''}
+          </div>
+          <button class="chip" style="flex-shrink:0;font-size:12px;padding:8px 10px" onclick="openExPicker(${ei})">Wijzigen</button>`;
+      } else if (ex._picking) {
+        hdrHTML = `
+          <div style="flex:1;font-size:14px;font-weight:700;color:var(--text)">Kies oefening</div>
+          ${ex.name?`<button class="chip" style="flex-shrink:0;font-size:12px;padding:8px 10px" onclick="cancelPicker(${ei})">Annuleren</button>`:''}`;
+      } else {
+        hdrHTML = `
+          <button class="btn btn-surface" style="flex:1;justify-content:flex-start;padding:10px 14px;font-size:14px;font-weight:600;gap:8px" onclick="openExPicker(${ei})">
+            ${IC.search} Kies oefening…
+          </button>`;
+      }
+
+      // ── Sets rows (only when exercise is selected and not picking) ──
+      const setsHTML = (ex.name && !ex._picking) ? `
         <div class="set-header"><span></span><span>Reps</span><span>kg</span></div>
         ${ex.sets.map((s,si)=>`
           <div class="set-row">
@@ -1339,9 +1427,18 @@ function buildTForm() {
             <input class="set-inp" type="number" inputmode="numeric" placeholder="—" value="${s.reps}" oninput="tF.exercises[${ei}].sets[${si}].reps=this.value">
             <input class="set-inp" type="number" inputmode="decimal" placeholder="—" value="${s.weight}" oninput="tF.exercises[${ei}].sets[${si}].weight=this.value">
           </div>`).join('')}
-        <button class="add-set-btn" onclick="addSet(${ei})">+ Set toevoegen</button>
-      </div>`).join('')
-      + `<button class="add-ex-btn" onclick="addEx()">+ Oefening toevoegen</button>`;
+        <button class="add-set-btn" onclick="addSet(${ei})">+ Set toevoegen</button>` : '';
+
+      return `
+        <div class="ex-block">
+          <div class="ex-hdr">
+            ${hdrHTML}
+            ${tF.exercises.length>1?`<button class="rm-ex-btn" onclick="rmEx(${ei})">${IC.trash}</button>`:''}
+          </div>
+          ${pickerHTML}
+          ${setsHTML}
+        </div>`;
+    }).join('') + `<button class="add-ex-btn" onclick="addEx()">+ Oefening toevoegen</button>`;
   } else if (tF.type==='motocross') {
     specific = `<label class="lbl">Intensiteit</label><div class="chips">${
       ['low','medium','high'].map(i=>`<button class="chip${tF.intensity===i?' on':''}" style="${tF.intensity===i?'background:#DC2626;border-color:#DC2626':''}" onclick="setIntensity('${i}')">${i==='low'?'Laag':i==='medium'?'Gemiddeld':'Hoog'}</button>`).join('')
@@ -1370,7 +1467,7 @@ const rebuildTForm = () => { document.getElementById('modal-body').innerHTML = b
 function setTType(t)    { tF.type=t;            rebuildTForm(); }
 function setIntensity(i){ tF.intensity=i;        rebuildTForm(); }
 function setET(t)       { tF.enduranceType=t;    rebuildTForm(); }
-function addEx()        { tF.exercises.push({name:'',sets:[{reps:'',weight:''}]}); rebuildTForm(); }
+function addEx()        { tF.exercises.push(_mkEx()); rebuildTForm(); }
 function rmEx(i)        { tF.exercises.splice(i,1); rebuildTForm(); }
 function addSet(ei)     { tF.exercises[ei].sets.push({reps:'',weight:''}); rebuildTForm(); }
 
@@ -1379,12 +1476,98 @@ function saveTraining() {
     id:uid(), timestamp:new Date().toISOString(), date:todayStr(), type:tF.type,
     duration:tF.duration?parseInt(tF.duration):undefined,
     notes:tF.notes||undefined,
-    exercises:tF.type==='strength'?tF.exercises.filter(e=>e.name.trim()):undefined,
+    exercises:tF.type==='strength'?tF.exercises.filter(e=>e.name.trim()).map(e=>({name:e.name,wgerId:e.wgerId,muscleStr:e.muscleStr,sets:e.sets})):undefined,
     intensity:tF.type==='motocross'?tF.intensity:undefined,
     enduranceType:tF.type==='endurance'?tF.enduranceType:undefined,
     distance:tF.type==='endurance'&&tF.distance?parseFloat(tF.distance):undefined,
   };
   db.push('training',entry); closeModal(); RENDERS.training(); toast('Training opgeslagen');
+}
+
+// ── wger exercise picker functions ──────────────────────
+function openExPicker(ei) {
+  tF.exercises[ei]._picking = true;
+  rebuildTForm();
+}
+function cancelPicker(ei) {
+  tF.exercises[ei]._picking = false;
+  rebuildTForm();
+}
+
+async function loadCatExercises(ei, catId) {
+  tF.exercises[ei]._catId = catId;
+  tF.exercises[ei]._filter = '';
+  if (_wgerCache[catId]) {
+    tF.exercises[ei]._catExercises = _wgerCache[catId];
+    tF.exercises[ei]._loading = false;
+    rebuildTForm();
+    return;
+  }
+  tF.exercises[ei]._loading = true;
+  tF.exercises[ei]._catExercises = [];
+  rebuildTForm();
+  try {
+    const res  = await fetch(`${WGER_BASE}/exerciseinfo/?format=json&language=2&category=${catId}&limit=100`);
+    const data = await res.json();
+    const exercises = (data.results || [])
+      .map(e => {
+        const trans = e.translations.find(t => t.language === 2 || t.language?.id === 2);
+        if (!trans?.name?.trim()) return null;
+        const pri = (e.muscles         || []).map(m => m.name_en).filter(Boolean);
+        const sec = (e.muscles_secondary|| []).map(m => m.name_en).filter(Boolean);
+        const muscles = [...pri, ...sec.map(s => s + '*')].join(' · ');
+        return { id: e.id, name: trans.name.trim(), muscles };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    _wgerCache[catId] = exercises;
+    tF.exercises[ei]._catExercises = exercises;
+  } catch(e) {
+    toast('Kan oefeningen niet laden: ' + e.message);
+    tF.exercises[ei]._catExercises = [];
+  }
+  tF.exercises[ei]._loading = false;
+  rebuildTForm();
+}
+
+function rebuildExList(ei) {
+  const ex  = tF.exercises[ei];
+  const el  = document.getElementById(`ex-list-${ei}`);
+  if (!el) return;
+  const filtered = ex._filter
+    ? ex._catExercises.filter(e => e.name.toLowerCase().includes(ex._filter))
+    : ex._catExercises;
+  el.innerHTML = filtered.map((e, xi) => `
+    <div class="ex-pick-item" onclick="chooseExercise(${ei},${xi})">
+      <div class="ex-pick-name">${e.name}</div>
+      ${e.muscles?`<div class="ex-pick-muscles">${e.muscles}</div>`:''}
+    </div>`).join('');
+}
+
+function chooseExercise(ei, xi) {
+  // xi is index in the FILTERED list — look up in full list using current filter
+  const ex  = tF.exercises[ei];
+  const filtered = ex._filter
+    ? ex._catExercises.filter(e => e.name.toLowerCase().includes(ex._filter))
+    : ex._catExercises;
+  const chosen = filtered[xi];
+  if (!chosen) return;
+  ex.name      = chosen.name;
+  ex.wgerId    = chosen.id;
+  ex.muscleStr = chosen.muscles;
+  ex._picking  = false;
+  ex._filter   = '';
+  rebuildTForm();
+}
+
+function useCustomEx(ei) {
+  const name = document.getElementById(`custom-ex-${ei}`)?.value?.trim();
+  if (!name) { toast('Vul een naam in'); return; }
+  tF.exercises[ei].name      = name;
+  tF.exercises[ei].wgerId    = null;
+  tF.exercises[ei].muscleStr = '';
+  tF.exercises[ei]._picking  = false;
+  rebuildTForm();
 }
 
 // ═══════════════════════════════════════════════════════
