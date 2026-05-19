@@ -1302,10 +1302,41 @@ function saveManualEntry() {
 //  TRAINING
 // ═══════════════════════════════════════════════════════
 const _mkEx = () => ({name:'',wgerId:null,muscleStr:'',sets:[{reps:'',weight:''}],_picking:false,_catId:null,_catExercises:[],_loading:false,_filter:'',_sq:'',_sr:[],_sl:false});
-let tF = {type:'strength',duration:'',intensity:'medium',enduranceType:'run',distance:'',notes:'',exercises:[_mkEx()]};
+let tF = {type:'strength',duration:'',intensity:'medium',enduranceType:'run',distance:'',notes:'',date:todayStr(),exercises:[_mkEx()]};
+
+function renderTEntry(e, i) {
+  const m = TYPE_META[e.type];
+  const detail = e.type==='strength'
+    ? `${e.exercises?.length??0} oefeningen${e.duration?` · ${e.duration} min`:''}`
+    : e.type==='motocross' ? `${e.duration??0} min · intensiteit: ${e.intensity}`
+    : `${e.enduranceType} · ${e.duration??0} min · ${e.distance??0} km`;
+  return `<div class="t-entry" style="border-left-color:${m.color};animation-delay:${i*40}ms">
+    <div class="t-type-icon" style="background:${m.bg};stroke:${m.color}">${m.icon}</div>
+    <div class="t-info">
+      <div class="t-name">${m.label}</div>
+      <div class="t-detail">${detail}</div>
+      ${e.notes?`<div class="t-note">${e.notes}</div>`:''}
+    </div>
+    <button class="del-btn" onclick="deleteTraining('${e.id}')">${IC.trash}</button>
+  </div>`;
+}
 
 RENDERS.training = function renderTraining() {
-  const entries = forToday(db.getArr('training'));
+  const all     = db.getArr('training');
+  const today   = todayStr();
+  const todayEntries = all.filter(e => (e.date||'').startsWith(today));
+  const past     = all.filter(e => !(e.date||'').startsWith(today));
+
+  // Group past entries by date, sorted newest first
+  const grouped = {};
+  past.forEach(e => {
+    const d = e.date || e.timestamp?.slice(0,10) || '?';
+    if (!grouped[d]) grouped[d] = [];
+    grouped[d].push(e);
+  });
+  const sortedDates = Object.keys(grouped).sort().reverse();
+
+  const fmt = d => new Date(d + 'T12:00:00').toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'});
 
   const emptyHTML = `
     <div class="empty">
@@ -1316,27 +1347,18 @@ RENDERS.training = function renderTraining() {
       <p>Log je eerste sessie van vandaag</p>
     </div>`;
 
+  const historyHTML = sortedDates.map(d => `
+    <div class="section-title" style="font-size:14px;color:var(--muted);font-weight:600;margin-top:20px">${fmt(d)}</div>
+    ${grouped[d].map((e,i) => renderTEntry(e,i)).join('')}
+  `).join('');
+
   document.getElementById('training-content').innerHTML = `
     <button class="btn btn-primary" style="margin-bottom:20px;animation:slide-up 260ms var(--ease-out)" onclick="openTrainingModal()">
       ${IC.plus} Training loggen
     </button>
     <div class="section-title">Vandaag</div>
-    ${entries.length===0 ? emptyHTML : entries.map((e,i) => {
-      const m = TYPE_META[e.type];
-      const detail = e.type==='strength'
-        ? `${e.exercises?.length??0} oefeningen${e.duration?` · ${e.duration} min`:''}`
-        : e.type==='motocross' ? `${e.duration??0} min · intensiteit: ${e.intensity}`
-        : `${e.enduranceType} · ${e.duration??0} min · ${e.distance??0} km`;
-      return `<div class="t-entry" style="border-left-color:${m.color};animation-delay:${i*40}ms">
-        <div class="t-type-icon" style="background:${m.bg};stroke:${m.color}">${m.icon}</div>
-        <div class="t-info">
-          <div class="t-name">${m.label}</div>
-          <div class="t-detail">${detail}</div>
-          ${e.notes?`<div class="t-note">${e.notes}</div>`:''}
-        </div>
-        <button class="del-btn" onclick="deleteTraining('${e.id}')">${IC.trash}</button>
-      </div>`;
-    }).join('')}`;
+    ${todayEntries.length===0 ? emptyHTML : todayEntries.map((e,i) => renderTEntry(e,i)).join('')}
+    ${historyHTML}`;
 };
 
 function deleteTraining(id) {
@@ -1345,7 +1367,7 @@ function deleteTraining(id) {
 }
 
 function openTrainingModal() {
-  tF = {type:'strength',duration:'',intensity:'medium',enduranceType:'run',distance:'',notes:'',exercises:[_mkEx()]};
+  tF = {type:'strength',duration:'',intensity:'medium',enduranceType:'run',distance:'',notes:'',date:todayStr(),exercises:[_mkEx()]};
   openModal('Training loggen', buildTForm());
 }
 
@@ -1468,6 +1490,8 @@ function buildTForm() {
   }
 
   return `
+    <label class="lbl">Datum</label>
+    <input class="inp" type="date" value="${tF.date}" max="${todayStr()}" oninput="tF.date=this.value">
     <label class="lbl">Type training</label>
     <div class="chips" style="flex-wrap:nowrap">${typeChips}</div>
     <label class="lbl">Duur (minuten)</label>
@@ -1488,7 +1512,7 @@ function addSet(ei)     { tF.exercises[ei].sets.push({reps:'',weight:''}); rebui
 
 function saveTraining() {
   const entry = {
-    id:uid(), timestamp:new Date().toISOString(), date:todayStr(), type:tF.type,
+    id:uid(), timestamp:new Date().toISOString(), date:tF.date||todayStr(), type:tF.type,
     duration:tF.duration?parseInt(tF.duration):undefined,
     notes:tF.notes||undefined,
     exercises:tF.type==='strength'?tF.exercises.filter(e=>e.name.trim()).map(e=>({name:e.name,wgerId:e.wgerId,muscleStr:e.muscleStr,sets:e.sets})):undefined,
