@@ -10,6 +10,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <style>
     /* ── Tokens ──────────────────────────────────────────── */
     :root {
@@ -627,6 +630,14 @@
     </div>
   </div>
 
+  <!-- ── Sync dot ──────────────────────────────────── -->
+  <div id="sync-dot" title="Sync status" style="
+    position:fixed;top:16px;right:16px;z-index:60;
+    width:8px;height:8px;border-radius:50%;
+    background:var(--subtle);
+    transition:background 600ms var(--ease-out);
+  "></div>
+
   <!-- ── Loader ─────────────────────────────────────── -->
   <div class="loader" id="loader">
     <div class="loader-inner">
@@ -647,16 +658,8 @@
 // ═══════════════════════════════════════════════════════
 //  CONSTANTS & ICONS
 // ═══════════════════════════════════════════════════════
-const GEMINI_MODELS = [
-  {id:'gemini-1.5-flash',     label:'Gemini 1.5 Flash (gratis, stabiel)'},
-  {id:'gemini-2.0-flash',     label:'Gemini 2.0 Flash'},
-  {id:'gemini-2.5-flash-preview-05-20', label:'Gemini 2.5 Flash Preview'},
-];
-const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-function geminiUrl() {
-  const {model='gemini-1.5-flash'} = db.getObj('settings');
-  return `${GEMINI_BASE}/${model}:generateContent`;
-}
+const GROQ_URL   = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
 const QUALITY_LABELS = ['','Zeer slecht','Slecht','Matig','Goed','Uitstekend'];
 const QUALITY_COLORS = ['','#DC2626','#D97706','#CA8A04','#16A34A','#059669'];
 
@@ -692,13 +695,185 @@ const _wgerCache = {};
 // ═══════════════════════════════════════════════════════
 //  STORAGE
 // ═══════════════════════════════════════════════════════
+const SYNC_KEYS = ['food','training','sleep'];
 const db = {
-  getArr: k   => JSON.parse(localStorage.getItem(`fc_${k}`) || '[]'),
+  getArr: k     => JSON.parse(localStorage.getItem(`fc_${k}`) || '[]'),
   getObj: (k,d) => JSON.parse(localStorage.getItem(`fc_${k}`) || JSON.stringify(d ?? {})),
-  set:    (k,v) => localStorage.setItem(`fc_${k}`, JSON.stringify(v)),
+  set:    (k,v) => { localStorage.setItem(`fc_${k}`, JSON.stringify(v)); if (SYNC_KEYS.includes(k)) scheduleFbSync(); },
   push:   (k,item) => { const a = db.getArr(k); a.unshift(item); db.set(k,a); },
   remove: (k,id)   => db.set(k, db.getArr(k).filter(x => x.id !== id)),
 };
+
+// ═══════════════════════════════════════════════════════
+//  FIREBASE SETUP + AUTH
+// ═══════════════════════════════════════════════════════
+firebase.initializeApp({
+  apiKey:            'AIzaSyDP3HuPPMkVnYY6KXkduoRpkFHY-5Ac2Hk',
+  authDomain:        'fitness-coach188.firebaseapp.com',
+  databaseURL:       'https://fitness-coach188-default-rtdb.europe-west1.firebasedatabase.app',
+  projectId:         'fitness-coach188',
+  storageBucket:     'fitness-coach188.firebasestorage.app',
+  messagingSenderId: '434311333181',
+  appId:             '1:434311333181:web:9be7765cc6da7f2bbdb154',
+});
+const fbAuth = firebase.auth();
+const fbDB   = firebase.database();
+
+const _googleProvider = new firebase.auth.GoogleAuthProvider();
+_googleProvider.addScope('https://www.googleapis.com/auth/fitness.sleep.read');
+
+let _fbUser  = null;
+let _gToken  = null;
+let _fbTimer = null;
+let _fbStatus = 'idle';
+
+function _arrToObj(arr) {
+  return Object.fromEntries((arr||[]).map(item => [item.id, item]));
+}
+function _objToArr(obj) {
+  return Object.values(obj||{}).sort((a,b) =>
+    (b.timestamp||b.date||'').localeCompare(a.timestamp||a.date||''));
+}
+function _setSyncDot(status) {
+  _fbStatus = status;
+  const el = document.getElementById('sync-dot');
+  if (!el) return;
+  const colors = {idle:'var(--subtle)', syncing:'var(--amber)', synced:'var(--green)', error:'var(--red)'};
+  const titles = {idle:'Niet ingelogd', syncing:'Synchroniseren…', synced:'Gesynchroniseerd', error:'Sync mislukt'};
+  el.style.background = colors[status] || colors.idle;
+  el.title = titles[status] || '';
+}
+
+async function fbPush() {
+  if (!_fbUser) return;
+  _setSyncDot('syncing');
+  try {
+    await fbDB.ref(`users/${_fbUser.uid}/data`).set({
+      food:     _arrToObj(db.getArr('food')),
+      training: _arrToObj(db.getArr('training')),
+      sleep:    _arrToObj(db.getArr('sleep')),
+    });
+    localStorage.setItem('fc_lastSync', new Date().toISOString());
+    _setSyncDot('synced');
+  } catch { _setSyncDot('error'); }
+}
+
+async function fbPull() {
+  if (!_fbUser) return;
+  _setSyncDot('syncing');
+  try {
+    const snap = await fbDB.ref(`users/${_fbUser.uid}/data`).get();
+    const data = snap.val();
+    if (data) {
+      if (data.food)     localStorage.setItem('fc_food',     JSON.stringify(_objToArr(data.food)));
+      if (data.training) localStorage.setItem('fc_training', JSON.stringify(_objToArr(data.training)));
+      if (data.sleep)    localStorage.setItem('fc_sleep',    JSON.stringify(_objToArr(data.sleep)));
+      localStorage.setItem('fc_lastSync', new Date().toISOString());
+    }
+    _setSyncDot('synced');
+  } catch { _setSyncDot('error'); }
+}
+
+function scheduleFbSync() {
+  if (!_fbUser) return;
+  _setSyncDot('syncing');
+  clearTimeout(_fbTimer);
+  _fbTimer = setTimeout(fbPush, 1500);
+}
+
+async function signInWithGoogle() {
+  try {
+    const result = await fbAuth.signInWithPopup(_googleProvider);
+    _gToken = result.credential.accessToken;
+  } catch(e) {
+    toast('Inloggen mislukt');
+  }
+}
+
+async function signOutGoogle() {
+  await fbAuth.signOut();
+  _fbUser = null;
+  _gToken = null;
+  _setSyncDot('idle');
+  RENDERS.settings();
+  toast('Uitgelogd');
+}
+
+// Auth state — fired on page load en na login/logout
+fbAuth.onAuthStateChanged(async user => {
+  _fbUser = user;
+  if (user) {
+    // Migreer oude open data (/data) naar beveiligde gebruikersmap
+    try {
+      const oldSnap = await fbDB.ref('data').get();
+      if (oldSnap.exists()) {
+        await fbDB.ref(`users/${user.uid}/data`).update(oldSnap.val());
+        await fbDB.ref('data').remove();
+      }
+    } catch {}
+    await fbPull();
+    RENDERS.dashboard();
+    if (document.getElementById('settings-content')) RENDERS.settings();
+  } else {
+    _setSyncDot('idle');
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+//  GOOGLE FIT — SLAAP IMPORT
+// ═══════════════════════════════════════════════════════
+async function importFitSleep() {
+  if (!_gToken) {
+    toast('Log opnieuw in om Fit-toegang te vernieuwen');
+    return;
+  }
+  const now     = Date.now();
+  const weekAgo = now - 14 * 24 * 60 * 60 * 1000; // 2 weken terug
+  try {
+    const res = await fetch(
+      `https://www.googleapis.com/fitness/v1/users/me/sessions` +
+      `?activityType=72&startTime=${new Date(weekAgo).toISOString()}&endTime=${new Date(now).toISOString()}`,
+      { headers: { 'Authorization': `Bearer ${_gToken}` } }
+    );
+    if (res.status === 401) {
+      toast('Sessie verlopen — log opnieuw in');
+      _gToken = null;
+      RENDERS.settings();
+      return;
+    }
+    if (!res.ok) throw new Error();
+    const data     = await res.json();
+    const sessions = data.session || [];
+    if (!sessions.length) { toast('Geen slaapdata in Google Fit gevonden'); return; }
+
+    const existing     = db.getArr('sleep');
+    const existingDates = new Set(existing.map(s => s.date));
+    let added = 0;
+
+    for (const s of sessions) {
+      const start    = new Date(Number(s.startTimeMillis));
+      const end      = new Date(Number(s.endTimeMillis));
+      const date     = end.toISOString().slice(0, 10);
+      if (existingDates.has(date)) continue;
+      const bedtime  = start.toTimeString().slice(0, 5);
+      const wakeTime = end.toTimeString().slice(0, 5);
+      const duration = Math.round((end - start) / 360000) / 10; // 1 decimaal
+      existing.push({ id: uid(), date, bedtime, wakeTime, duration, quality: 3 });
+      existingDates.add(date);
+      added++;
+    }
+
+    if (added > 0) {
+      db.set('sleep', existing.sort((a, b) => b.date.localeCompare(a.date)));
+      toast(`${added} slaapnacht${added > 1 ? 'en' : ''} geïmporteerd`);
+      RENDERS.sleep();
+    } else {
+      toast('Alle slaapdata was al aanwezig');
+    }
+  } catch {
+    toast('Importeren mislukt — controleer je verbinding');
+  }
+}
 
 // ═══════════════════════════════════════════════════════
 //  DATE HELPERS
@@ -737,29 +912,35 @@ function resizeImage(file, maxPx=900) {
 }
 
 // ═══════════════════════════════════════════════════════
-//  GEMINI API
+//  GROQ API
 // ═══════════════════════════════════════════════════════
-async function callGemini(parts) {
+async function callGroq(messages) {
   const {apiKey} = db.getObj('settings');
   if (!apiKey) throw new Error('Geen API-key. Ga naar Instellingen.');
-  const res = await fetch(`${geminiUrl()}?key=${apiKey}`, {
-    method:'POST',
-    headers:{'content-type':'application/json'},
-    body: JSON.stringify({contents:[{parts}]}),
+  const res = await fetch(GROQ_URL, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({model: GROQ_MODEL, messages}),
   });
   if (!res.ok) {
-    if (res.status === 429) throw new Error('Limiet bereikt — wacht 1 minuut en probeer opnieuw (gratis Gemini: 15 verzoeken/minuut)');
-    if (res.status === 403) throw new Error('API-key ongeldig — controleer je sleutel in Instellingen');
-    throw new Error(`Gemini fout (${res.status}) — controleer je API-key`);
+    if (res.status === 429) throw new Error('Limiet bereikt — wacht even en probeer opnieuw');
+    if (res.status === 401) throw new Error('API-key ongeldig — controleer je sleutel in Instellingen');
+    throw new Error(`Groq fout (${res.status})`);
   }
-  return res.json().then(d => d.candidates[0].content.parts[0].text);
+  return res.json().then(d => d.choices[0].message.content);
 }
 
 async function analyzeFood(base64) {
-  const text = await callGemini([
-    {inlineData:{mimeType:'image/jpeg',data:base64}},
-    {text:`Analyze this food image. Reply with ONLY raw JSON, no markdown:\n{"description":"food name in Dutch","calories":0,"protein":0,"carbs":0,"fat":0}`},
-  ]);
+  const text = await callGroq([{
+    role: 'user',
+    content: [
+      {type: 'image_url', image_url: {url: `data:image/jpeg;base64,${base64}`}},
+      {type: 'text', text: 'Analyze this food image. Reply with ONLY raw JSON, no markdown:\n{"description":"food name in Dutch","calories":0,"protein":0,"carbs":0,"fat":0}'},
+    ],
+  }]);
   const m = text.match(/\{[\s\S]*\}/);
   if (!m) throw new Error('Kon voedingsdata niet lezen');
   return JSON.parse(m[0]);
@@ -780,8 +961,10 @@ async function fetchAdvice() {
       return `${t.enduranceType} (${t.duration??0}min, ${t.distance??0}km)`;
     }).join('; ');
   const sleepDesc = sleep ? `${sleep.duration.toFixed(1)}u, kwaliteit ${sleep.quality}/5` : 'Niet gelogd';
-  return callGemini([{text:
-    `Je bent een persoonlijke fitnesscoach. Geef beknopt, actionabel advies in het Nederlands.
+  return callGroq([{
+    role: 'user',
+    content:
+      `Je bent een persoonlijke fitnesscoach. Geef beknopt, actionabel advies in het Nederlands.
 
 VANDAAG:
 • Slaap: ${sleepDesc}
@@ -794,7 +977,8 @@ Geef precies 4 bulletpunten (gebruik •):
 3. Trainingsnoot
 4. Eén concrete aanbeveling voor morgen
 
-Direct, persoonlijk, motiverend. Max 160 woorden.`}]);
+Direct, persoonlijk, motiverend. Max 160 woorden.`,
+  }]);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1777,32 +1961,80 @@ function saveSleep() {
 //  SETTINGS
 // ═══════════════════════════════════════════════════════
 RENDERS.settings = function renderSettings() {
-  const {apiKey='', model='gemini-1.5-flash'} = db.getObj('settings');
-  const modelOpts = GEMINI_MODELS.map(m =>
-    `<option value="${m.id}"${m.id===model?' selected':''}>${m.label}</option>`
-  ).join('');
+  const {apiKey=''} = db.getObj('settings');
+  const user = _fbUser;
+  const lastSync = localStorage.getItem('fc_lastSync');
   document.getElementById('settings-content').innerHTML = `
     <div class="card" style="animation:slide-up 260ms var(--ease-out)">
-      <div class="card-label">Gemini API-key</div>
+      <div class="card-label">Google-account</div>
+      ${user ? `
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          ${user.photoURL
+            ? `<img src="${user.photoURL}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+            : `<div style="width:44px;height:44px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="22" height="22" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>`}
+          <div>
+            <div style="font-weight:700;font-size:15px">${user.displayName||'Gebruiker'}</div>
+            <div style="font-size:13px;color:var(--muted)">${user.email}</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost" style="margin-bottom:8px" onclick="importFitSleep()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><polyline points="12 6 12 12 16 14"/><path d="M22 2 12 12"/><polyline points="18 2 22 2 22 6"/></svg>
+          Slaap importeren uit Google Fit
+        </button>
+        ${!_gToken ? `<p style="font-size:12px;color:var(--amber);margin-bottom:8px">Sessie verlopen — log opnieuw in om te importeren</p>` : ''}
+        <button class="btn btn-surface" onclick="signOutGoogle()">Uitloggen</button>
+      ` : `
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">
+          Log in met Google voor beveiligde sync en automatische slaapimport vanuit Google Fit
+        </p>
+        <button class="btn btn-primary" onclick="signInWithGoogle()">
+          <svg width="18" height="18" viewBox="0 0 24 24" style="flex-shrink:0">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66 2.84z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+          </svg>
+          Inloggen met Google
+        </button>
+      `}
+    </div>
+
+    <div class="card" style="animation:slide-up 260ms 40ms var(--ease-out) both">
+      <div class="card-label">Firebase sync</div>
+      <div class="s-row">
+        <span>Status</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <span style="width:8px;height:8px;border-radius:50%;background:${user ? 'var(--green)' : 'var(--subtle)'};display:inline-block"></span>
+          ${user
+            ? (lastSync
+                ? `Gesync om ${new Date(lastSync).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`
+                : 'Verbonden')
+            : 'Niet ingelogd'}
+        </span>
+      </div>
+      ${user ? `<button class="btn btn-surface" style="margin-top:10px" onclick="fbPush().then(()=>RENDERS.settings())">Nu synchroniseren</button>` : ''}
+    </div>
+
+    <div class="card" style="animation:slide-up 260ms 80ms var(--ease-out) both">
+      <div class="card-label">Groq API-key</div>
       <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">
         Haal je gratis sleutel op via
-        <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a>
+        <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a>
+        — gratis, geen creditcard nodig
       </p>
-      <input class="inp" id="inp-key" type="password" placeholder="AIzaSy…" value="${apiKey}">
+      <input class="inp" id="inp-key" type="password" placeholder="gsk_…" value="${apiKey}">
       ${apiKey?`<p style="margin-top:10px;font-size:13px;color:var(--green);font-weight:600">API-key is ingesteld</p>`:''}
-      <label class="lbl">Model <span style="font-weight:400;color:var(--subtle)">(bij 429-fout: kies 1.5 Flash)</span></label>
-      <select class="inp" id="inp-model" style="appearance:auto">${modelOpts}</select>
       <button class="btn btn-primary" style="margin-top:14px" onclick="saveSettings()">Opslaan</button>
     </div>
 
-    <div class="card" style="animation:slide-up 260ms 50ms var(--ease-out) both">
+    <div class="card" style="animation:slide-up 260ms 120ms var(--ease-out) both">
       <div class="card-label">Toevoegen aan beginscherm</div>
       <p style="font-size:13px;color:var(--muted);line-height:1.65">
         Open in <strong>Safari</strong> → tik op het deel-icoon → kies <strong>"Zet op beginscherm"</strong>
       </p>
     </div>
 
-    <div class="card" style="animation:slide-up 260ms 100ms var(--ease-out) both">
+    <div class="card" style="animation:slide-up 260ms 160ms var(--ease-out) both">
       <div class="card-label">Opgeslagen data</div>
       <div class="s-row"><span>Maaltijden</span><span>${db.getArr('food').length}</span></div>
       <div class="s-row"><span>Trainingen</span><span>${db.getArr('training').length}</span></div>
@@ -1814,7 +2046,6 @@ RENDERS.settings = function renderSettings() {
 function saveSettings() {
   db.set('settings',{
     apiKey: document.getElementById('inp-key').value.trim(),
-    model:  document.getElementById('inp-model')?.value || 'gemini-1.5-flash',
   });
   RENDERS.settings(); toast('Opgeslagen');
 }
@@ -1827,7 +2058,10 @@ function clearAll() {
 // ═══════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════
-RENDERS.dashboard();
+(function init() {
+  RENDERS.dashboard(); // render direct met lokale data
+  // Firebase data wordt geladen via onAuthStateChanged (zie boven)
+}());
 </script>
 </body>
 </html>
