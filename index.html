@@ -1301,7 +1301,7 @@ function saveManualEntry() {
 // ═══════════════════════════════════════════════════════
 //  TRAINING
 // ═══════════════════════════════════════════════════════
-const _mkEx = () => ({name:'',wgerId:null,muscleStr:'',sets:[{reps:'',weight:''}],_picking:false,_catId:null,_catExercises:[],_loading:false,_filter:''});
+const _mkEx = () => ({name:'',wgerId:null,muscleStr:'',sets:[{reps:'',weight:''}],_picking:false,_catId:null,_catExercises:[],_loading:false,_filter:'',_sq:'',_sr:[],_sl:false});
 let tF = {type:'strength',duration:'',intensity:'medium',enduranceType:'run',distance:'',notes:'',exercises:[_mkEx()]};
 
 RENDERS.training = function renderTraining() {
@@ -1388,9 +1388,24 @@ function buildTForm() {
 
         pickerHTML = `
           <div>
-            <label class="lbl" style="margin-top:4px">Categorie</label>
+            <input class="inp" id="ex-sq-${ei}" placeholder="Zoek oefening op naam…"
+              value="${ex._sq}"
+              oninput="exSearchInput(${ei}, this.value)"
+              style="margin-bottom:4px">
+            <div id="ex-sr-${ei}">${
+              !ex._sq ? '' :
+              ex._sl ? `<div class="db-msg">Zoeken in alle oefeningen…</div>` :
+              !ex._sr.length ? `<div class="db-msg">Geen resultaten voor "<b>${ex._sq}</b>"</div>` :
+              `<div class="ex-pick-wrap">${ex._sr.map((e,xi)=>`
+                <div class="ex-pick-item" onclick="chooseFromSearch(${ei},${xi})">
+                  <div class="ex-pick-name">${e.name}</div>
+                  ${e.muscles?`<div class="ex-pick-muscles">${e.muscles}</div>`:''}
+                </div>`).join('')}</div>`
+            }</div>
+            ${!ex._sq ? `
+            <label class="lbl" style="margin-top:10px">Of blader per categorie</label>
             <div class="chips" style="flex-wrap:wrap">${catChips}</div>
-            ${listHTML}
+            ${listHTML}` : ''}
             <div style="margin-top:10px;display:flex;gap:6px;align-items:center">
               <input class="inp" id="custom-ex-${ei}" placeholder="Of typ naam zelf…" style="flex:1;font-size:13px">
               <button class="btn btn-ghost" style="width:auto;padding:11px 14px;font-size:13px" onclick="useCustomEx(${ei})">OK</button>
@@ -1494,10 +1509,29 @@ function cancelPicker(ei) {
   rebuildTForm();
 }
 
+async function fetchCatExercises(catId) {
+  if (_wgerCache[catId] !== undefined) return;
+  _wgerCache[catId] = []; // mark as loading to prevent duplicate calls
+  try {
+    const res  = await fetch(`${WGER_BASE}/exerciseinfo/?format=json&language=2&category=${catId}&limit=100`);
+    const data = await res.json();
+    _wgerCache[catId] = (data.results || [])
+      .map(e => {
+        const tr = e.translations.find(t => t.language === 2 || t.language?.id === 2);
+        if (!tr?.name?.trim()) return null;
+        const pri = (e.muscles          || []).map(m => m.name_en).filter(Boolean);
+        const sec = (e.muscles_secondary|| []).map(m => m.name_en).filter(Boolean);
+        return { id: e.id, name: tr.name.trim(), muscles: [...pri, ...sec.map(s=>s+'*')].join(' · ') };
+      })
+      .filter(Boolean)
+      .sort((a,b) => a.name.localeCompare(b.name));
+  } catch { _wgerCache[catId] = []; }
+}
+
 async function loadCatExercises(ei, catId) {
   tF.exercises[ei]._catId = catId;
   tF.exercises[ei]._filter = '';
-  if (_wgerCache[catId]) {
+  if (_wgerCache[catId]?.length > 0) {
     tF.exercises[ei]._catExercises = _wgerCache[catId];
     tF.exercises[ei]._loading = false;
     rebuildTForm();
@@ -1506,27 +1540,9 @@ async function loadCatExercises(ei, catId) {
   tF.exercises[ei]._loading = true;
   tF.exercises[ei]._catExercises = [];
   rebuildTForm();
-  try {
-    const res  = await fetch(`${WGER_BASE}/exerciseinfo/?format=json&language=2&category=${catId}&limit=100`);
-    const data = await res.json();
-    const exercises = (data.results || [])
-      .map(e => {
-        const trans = e.translations.find(t => t.language === 2 || t.language?.id === 2);
-        if (!trans?.name?.trim()) return null;
-        const pri = (e.muscles         || []).map(m => m.name_en).filter(Boolean);
-        const sec = (e.muscles_secondary|| []).map(m => m.name_en).filter(Boolean);
-        const muscles = [...pri, ...sec.map(s => s + '*')].join(' · ');
-        return { id: e.id, name: trans.name.trim(), muscles };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.name.localeCompare(b.name));
-    _wgerCache[catId] = exercises;
-    tF.exercises[ei]._catExercises = exercises;
-  } catch(e) {
-    toast('Kan oefeningen niet laden: ' + e.message);
-    tF.exercises[ei]._catExercises = [];
-  }
+  await fetchCatExercises(catId);
   tF.exercises[ei]._loading = false;
+  tF.exercises[ei]._catExercises = _wgerCache[catId] || [];
   rebuildTForm();
 }
 
@@ -1567,6 +1583,66 @@ function useCustomEx(ei) {
   tF.exercises[ei].wgerId    = null;
   tF.exercises[ei].muscleStr = '';
   tF.exercises[ei]._picking  = false;
+  rebuildTForm();
+}
+
+let _exSearchTimer = null;
+
+function exSearchInput(ei, val) {
+  tF.exercises[ei]._sq = val.trim();
+  tF.exercises[ei]._sr = [];
+  clearTimeout(_exSearchTimer);
+  if (!val.trim()) {
+    tF.exercises[ei]._sl = false;
+    updateExSearchArea(ei);
+    return;
+  }
+  tF.exercises[ei]._sl = true;
+  updateExSearchArea(ei);
+  _exSearchTimer = setTimeout(() => doExSearch(ei, val.trim().toLowerCase()), 400);
+}
+
+async function doExSearch(ei, query) {
+  // Load all uncached categories in parallel
+  await Promise.all(WGER_CATS.filter(c => _wgerCache[c.id] === undefined).map(c => fetchCatExercises(c.id)));
+  // Guard: query may have changed while we were loading
+  if (tF.exercises[ei]._sq.toLowerCase() !== query) return;
+  const seen = new Set();
+  const results = [];
+  for (const cat of WGER_CATS) {
+    for (const ex of (_wgerCache[cat.id] || [])) {
+      if (!seen.has(ex.id) && ex.name.toLowerCase().includes(query)) {
+        seen.add(ex.id); results.push(ex);
+      }
+    }
+  }
+  tF.exercises[ei]._sr = results;
+  tF.exercises[ei]._sl = false;
+  updateExSearchArea(ei);
+}
+
+function updateExSearchArea(ei) {
+  const el = document.getElementById(`ex-sr-${ei}`);
+  if (!el) { rebuildTForm(); return; }
+  const ex = tF.exercises[ei];
+  if (!ex._sq) { el.innerHTML = ''; return; }
+  if (ex._sl)  { el.innerHTML = `<div class="db-msg">Zoeken in alle oefeningen…</div>`; return; }
+  if (!ex._sr.length) { el.innerHTML = `<div class="db-msg">Geen resultaten voor "<b>${ex._sq}</b>"</div>`; return; }
+  el.innerHTML = `<div class="ex-pick-wrap">
+    ${ex._sr.map((e,xi) => `
+      <div class="ex-pick-item" onclick="chooseFromSearch(${ei},${xi})">
+        <div class="ex-pick-name">${e.name}</div>
+        ${e.muscles?`<div class="ex-pick-muscles">${e.muscles}</div>`:''}
+      </div>`).join('')}
+  </div>`;
+}
+
+function chooseFromSearch(ei, xi) {
+  const chosen = tF.exercises[ei]._sr[xi];
+  if (!chosen) return;
+  const ex = tF.exercises[ei];
+  ex.name = chosen.name; ex.wgerId = chosen.id; ex.muscleStr = chosen.muscles;
+  ex._picking = false; ex._sq = ''; ex._sr = [];
   rebuildTForm();
 }
 
