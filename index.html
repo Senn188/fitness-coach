@@ -691,6 +691,18 @@ const WGER_CATS = [
   {id:14, nl:'Kuiten'}, {id:15, nl:'Cardio'},
 ];
 const _wgerCache = {};
+const _imgCache  = {}; // wgerId → URL of null
+
+async function fetchExImg(wgerId) {
+  if (!wgerId) return null;
+  if (wgerId in _imgCache) return _imgCache[wgerId];
+  try {
+    const res  = await fetch(`${WGER_BASE}/exerciseimage/?format=json&exercise=${wgerId}&is_main=True&limit=1`);
+    const data = await res.json();
+    _imgCache[wgerId] = data.results?.[0]?.image || null;
+  } catch { _imgCache[wgerId] = null; }
+  return _imgCache[wgerId];
+}
 
 // ═══════════════════════════════════════════════════════
 //  STORAGE
@@ -852,18 +864,11 @@ async function importFitSleep() {
       toast('Toegang verlopen — tik nogmaals om opnieuw in te loggen');
       return;
     }
-    if (res.status === 403) {
-      const body = await res.json().catch(() => ({}));
-      const msg  = body?.error?.message || '';
-      if (msg.includes('disabled')) {
-        toast('Fitness API niet ingeschakeld in Google Cloud');
-      } else {
-        toast('Geen toegang — controleer de Fitness API scope');
-      }
-      return;
-    }
     if (!res.ok) {
-      toast(`Google Fit fout (${res.status}) — probeer opnieuw`);
+      const body = await res.json().catch(() => ({}));
+      const msg  = body?.error?.message || `HTTP ${res.status}`;
+      console.error('Fit API error:', res.status, body);
+      toast(`Fit fout: ${msg.slice(0, 80)}`);
       return;
     }
 
@@ -1527,7 +1532,7 @@ function saveManualEntry() {
 // ═══════════════════════════════════════════════════════
 //  TRAINING
 // ═══════════════════════════════════════════════════════
-const _mkEx = () => ({name:'',wgerId:null,muscleStr:'',sets:[{reps:'',weight:''}],_picking:false,_catId:null,_catExercises:[],_loading:false,_filter:'',_sq:'',_sr:[],_sl:false});
+const _mkEx = () => ({name:'',wgerId:null,muscleStr:'',imgUrl:null,sets:[{reps:'',weight:''}],_picking:false,_catId:null,_catExercises:[],_loading:false,_filter:'',_sq:'',_sr:[],_sl:false});
 let tF = {type:'strength',duration:'',intensity:'medium',enduranceType:'run',distance:'',notes:'',date:todayStr(),exercises:[_mkEx()]};
 
 function renderTEntry(e, i) {
@@ -1536,12 +1541,18 @@ function renderTEntry(e, i) {
     ? `${e.exercises?.length??0} oefeningen${e.duration?` · ${e.duration} min`:''}`
     : e.type==='motocross' ? `${e.duration??0} min · intensiteit: ${e.intensity}`
     : `${e.enduranceType} · ${e.duration??0} min · ${e.distance??0} km`;
+  const exImgs = (e.exercises||[]).filter(ex=>ex.imgUrl).slice(0,4);
+  const imgStrip = exImgs.length ? `
+    <div style="display:flex;gap:4px;margin-top:8px">
+      ${exImgs.map(ex=>`<img src="${ex.imgUrl}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;background:var(--border-soft)">`).join('')}
+    </div>` : '';
   return `<div class="t-entry" style="border-left-color:${m.color};animation-delay:${i*40}ms">
     <div class="t-type-icon" style="background:${m.bg};stroke:${m.color}">${m.icon}</div>
     <div class="t-info">
       <div class="t-name">${m.label}</div>
       <div class="t-detail">${detail}</div>
       ${e.notes?`<div class="t-note">${e.notes}</div>`:''}
+      ${imgStrip}
     </div>
     <button class="del-btn" onclick="deleteTraining('${e.id}')">${IC.trash}</button>
   </div>`;
@@ -1665,9 +1676,12 @@ function buildTForm() {
       let hdrHTML;
       if (ex.name && !ex._picking) {
         hdrHTML = `
-          <div class="ex-selected">
-            <div class="ex-selected-name">${ex.name}</div>
-            ${ex.muscleStr?`<div class="ex-selected-muscles">${ex.muscleStr}</div>`:''}
+          <div class="ex-selected" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+            ${ex.imgUrl ? `<img src="${ex.imgUrl}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;flex-shrink:0;background:var(--border-soft)">` : ''}
+            <div style="min-width:0">
+              <div class="ex-selected-name">${ex.name}</div>
+              ${ex.muscleStr?`<div class="ex-selected-muscles">${ex.muscleStr}</div>`:''}
+            </div>
           </div>
           <button class="chip" style="flex-shrink:0;font-size:12px;padding:8px 10px" onclick="openExPicker(${ei})">Wijzigen</button>`;
       } else if (ex._picking) {
@@ -1741,7 +1755,7 @@ function saveTraining() {
     id:uid(), timestamp:new Date().toISOString(), date:tF.date||todayStr(), type:tF.type,
     duration:tF.duration?parseInt(tF.duration):undefined,
     notes:tF.notes||undefined,
-    exercises:tF.type==='strength'?tF.exercises.filter(e=>e.name.trim()).map(e=>({name:e.name,wgerId:e.wgerId,muscleStr:e.muscleStr,sets:e.sets})):undefined,
+    exercises:tF.type==='strength'?tF.exercises.filter(e=>e.name.trim()).map(e=>({name:e.name,wgerId:e.wgerId,muscleStr:e.muscleStr,imgUrl:e.imgUrl||null,sets:e.sets})):undefined,
     intensity:tF.type==='motocross'?tF.intensity:undefined,
     enduranceType:tF.type==='endurance'?tF.enduranceType:undefined,
     distance:tF.type==='endurance'&&tF.distance?parseFloat(tF.distance):undefined,
@@ -1810,8 +1824,7 @@ function rebuildExList(ei) {
     </div>`).join('');
 }
 
-function chooseExercise(ei, xi) {
-  // xi is index in the FILTERED list — look up in full list using current filter
+async function chooseExercise(ei, xi) {
   const ex  = tF.exercises[ei];
   const filtered = ex._filter
     ? ex._catExercises.filter(e => e.name.toLowerCase().includes(ex._filter))
@@ -1821,9 +1834,16 @@ function chooseExercise(ei, xi) {
   ex.name      = chosen.name;
   ex.wgerId    = chosen.id;
   ex.muscleStr = chosen.muscles;
+  ex.imgUrl    = null;
   ex._picking  = false;
   ex._filter   = '';
   rebuildTForm();
+  // Afbeelding ophalen op de achtergrond
+  const imgUrl = await fetchExImg(chosen.id);
+  if (tF.exercises[ei]?.wgerId === chosen.id) {
+    tF.exercises[ei].imgUrl = imgUrl;
+    rebuildTForm();
+  }
 }
 
 function useCustomEx(ei) {
@@ -1887,13 +1907,19 @@ function updateExSearchArea(ei) {
   </div>`;
 }
 
-function chooseFromSearch(ei, xi) {
+async function chooseFromSearch(ei, xi) {
   const chosen = tF.exercises[ei]._sr[xi];
   if (!chosen) return;
   const ex = tF.exercises[ei];
   ex.name = chosen.name; ex.wgerId = chosen.id; ex.muscleStr = chosen.muscles;
+  ex.imgUrl = null;
   ex._picking = false; ex._sq = ''; ex._sr = [];
   rebuildTForm();
+  const imgUrl = await fetchExImg(chosen.id);
+  if (tF.exercises[ei]?.wgerId === chosen.id) {
+    tF.exercises[ei].imgUrl = imgUrl;
+    rebuildTForm();
+  }
 }
 
 // ═══════════════════════════════════════════════════════
