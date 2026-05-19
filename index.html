@@ -823,30 +823,58 @@ fbAuth.onAuthStateChanged(async user => {
 //  GOOGLE FIT — SLAAP IMPORT
 // ═══════════════════════════════════════════════════════
 async function importFitSleep() {
+  // Token verlopen of nog niet aanwezig → stil opnieuw inloggen
   if (!_gToken) {
-    toast('Log opnieuw in om Fit-toegang te vernieuwen');
-    return;
+    toast('Toegang vernieuwen…');
+    try {
+      const result = await fbAuth.signInWithPopup(_googleProvider);
+      _gToken = result.credential.accessToken;
+      RENDERS.settings();
+    } catch {
+      toast('Inloggen mislukt — probeer opnieuw');
+      return;
+    }
   }
+
   const now     = Date.now();
-  const weekAgo = now - 14 * 24 * 60 * 60 * 1000; // 2 weken terug
+  const weekAgo = now - 14 * 24 * 60 * 60 * 1000;
+
   try {
     const res = await fetch(
       `https://www.googleapis.com/fitness/v1/users/me/sessions` +
       `?activityType=72&startTime=${new Date(weekAgo).toISOString()}&endTime=${new Date(now).toISOString()}`,
       { headers: { 'Authorization': `Bearer ${_gToken}` } }
     );
+
     if (res.status === 401) {
-      toast('Sessie verlopen — log opnieuw in');
       _gToken = null;
       RENDERS.settings();
+      toast('Toegang verlopen — tik nogmaals om opnieuw in te loggen');
       return;
     }
-    if (!res.ok) throw new Error();
+    if (res.status === 403) {
+      const body = await res.json().catch(() => ({}));
+      const msg  = body?.error?.message || '';
+      if (msg.includes('disabled')) {
+        toast('Fitness API niet ingeschakeld in Google Cloud');
+      } else {
+        toast('Geen toegang — controleer de Fitness API scope');
+      }
+      return;
+    }
+    if (!res.ok) {
+      toast(`Google Fit fout (${res.status}) — probeer opnieuw`);
+      return;
+    }
+
     const data     = await res.json();
     const sessions = data.session || [];
-    if (!sessions.length) { toast('Geen slaapdata in Google Fit gevonden'); return; }
+    if (!sessions.length) {
+      toast('Geen slaapdata in Google Fit gevonden');
+      return;
+    }
 
-    const existing     = db.getArr('sleep');
+    const existing      = db.getArr('sleep');
     const existingDates = new Set(existing.map(s => s.date));
     let added = 0;
 
@@ -857,7 +885,7 @@ async function importFitSleep() {
       if (existingDates.has(date)) continue;
       const bedtime  = start.toTimeString().slice(0, 5);
       const wakeTime = end.toTimeString().slice(0, 5);
-      const duration = Math.round((end - start) / 360000) / 10; // 1 decimaal
+      const duration = Math.round((end - start) / 360000) / 10;
       existing.push({ id: uid(), date, bedtime, wakeTime, duration, quality: 3 });
       existingDates.add(date);
       added++;
@@ -870,8 +898,9 @@ async function importFitSleep() {
     } else {
       toast('Alle slaapdata was al aanwezig');
     }
-  } catch {
-    toast('Importeren mislukt — controleer je verbinding');
+  } catch(e) {
+    console.error('Fit import error:', e);
+    toast('Verbindingsfout — controleer je internet');
   }
 }
 
