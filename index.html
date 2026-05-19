@@ -647,7 +647,16 @@
 // ═══════════════════════════════════════════════════════
 //  CONSTANTS & ICONS
 // ═══════════════════════════════════════════════════════
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_MODELS = [
+  {id:'gemini-1.5-flash',     label:'Gemini 1.5 Flash (gratis, stabiel)'},
+  {id:'gemini-2.0-flash',     label:'Gemini 2.0 Flash'},
+  {id:'gemini-2.5-flash-preview-05-20', label:'Gemini 2.5 Flash Preview'},
+];
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+function geminiUrl() {
+  const {model='gemini-1.5-flash'} = db.getObj('settings');
+  return `${GEMINI_BASE}/${model}:generateContent`;
+}
 const QUALITY_LABELS = ['','Zeer slecht','Slecht','Matig','Goed','Uitstekend'];
 const QUALITY_COLORS = ['','#DC2626','#D97706','#CA8A04','#16A34A','#059669'];
 
@@ -733,12 +742,16 @@ function resizeImage(file, maxPx=900) {
 async function callGemini(parts) {
   const {apiKey} = db.getObj('settings');
   if (!apiKey) throw new Error('Geen API-key. Ga naar Instellingen.');
-  const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+  const res = await fetch(`${geminiUrl()}?key=${apiKey}`, {
     method:'POST',
     headers:{'content-type':'application/json'},
     body: JSON.stringify({contents:[{parts}]}),
   });
-  if (!res.ok) throw new Error(`Gemini fout (${res.status}) — controleer je API-key`);
+  if (!res.ok) {
+    if (res.status === 429) throw new Error('Limiet bereikt — wacht 1 minuut en probeer opnieuw (gratis Gemini: 15 verzoeken/minuut)');
+    if (res.status === 403) throw new Error('API-key ongeldig — controleer je sleutel in Instellingen');
+    throw new Error(`Gemini fout (${res.status}) — controleer je API-key`);
+  }
   return res.json().then(d => d.candidates[0].content.parts[0].text);
 }
 
@@ -1764,7 +1777,10 @@ function saveSleep() {
 //  SETTINGS
 // ═══════════════════════════════════════════════════════
 RENDERS.settings = function renderSettings() {
-  const {apiKey=''} = db.getObj('settings');
+  const {apiKey='', model='gemini-1.5-flash'} = db.getObj('settings');
+  const modelOpts = GEMINI_MODELS.map(m =>
+    `<option value="${m.id}"${m.id===model?' selected':''}>${m.label}</option>`
+  ).join('');
   document.getElementById('settings-content').innerHTML = `
     <div class="card" style="animation:slide-up 260ms var(--ease-out)">
       <div class="card-label">Gemini API-key</div>
@@ -1774,6 +1790,8 @@ RENDERS.settings = function renderSettings() {
       </p>
       <input class="inp" id="inp-key" type="password" placeholder="AIzaSy…" value="${apiKey}">
       ${apiKey?`<p style="margin-top:10px;font-size:13px;color:var(--green);font-weight:600">API-key is ingesteld</p>`:''}
+      <label class="lbl">Model <span style="font-weight:400;color:var(--subtle)">(bij 429-fout: kies 1.5 Flash)</span></label>
+      <select class="inp" id="inp-model" style="appearance:auto">${modelOpts}</select>
       <button class="btn btn-primary" style="margin-top:14px" onclick="saveSettings()">Opslaan</button>
     </div>
 
@@ -1794,7 +1812,10 @@ RENDERS.settings = function renderSettings() {
 };
 
 function saveSettings() {
-  db.set('settings',{apiKey:document.getElementById('inp-key').value.trim()});
+  db.set('settings',{
+    apiKey: document.getElementById('inp-key').value.trim(),
+    model:  document.getElementById('inp-model')?.value || 'gemini-1.5-flash',
+  });
   RENDERS.settings(); toast('Opgeslagen');
 }
 function clearAll() {
