@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="theme-color" content="#F6F5F2">
+  <meta name="theme-color" content="#E8E0D5">
   <title>Fitness Coach</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -16,18 +16,38 @@
   <style>
     /* ── Tokens ──────────────────────────────────────────── */
     :root {
-      --bg:          #F6F5F2;
-      --surface:     #FFFFFF;
-      --accent:      #D4511F;
-      --accent-dim:  #FEF4EE;
-      --accent-text: #9A3412;
-      --text:        #1C1917;
-      --muted:       #78716C;
-      --subtle:      #A8A29E;
-      --border:      #E7E5E4;
-      --border-soft: #F5F5F4;
-      --green:       #16A34A;
-      --green-dim:   #DCFCE7;
+      /* Backgrounds */
+      --bg:          #E8E0D5;
+      --surface:     #F5F0EB;
+      --surface-alt: #EDE8E2;
+
+      /* Accent — Forest Green */
+      --accent:      #2D4A3E;
+      --accent-dim:  #E2EDE8;
+      --accent-text: #1A3830;
+
+      /* Text */
+      --text:        #1A1A1A;
+      --muted:       #6B6560;
+      --subtle:      #9E9590;
+
+      /* Borders */
+      --border:      #DDD8D0;
+      --border-soft: #E8E3DC;
+
+      /* Functional palette */
+      --carbs:       #E8943A;
+      --carbs-dim:   #FDF0E0;
+      --protein:     #4A9B7F;
+      --protein-dim: #E4F4EE;
+      --fat:         #7B9E6B;
+      --fat-dim:     #EBF3E7;
+      --sleep-c:     #C8A882;
+      --sleep-dim:   #F5EEE4;
+
+      /* Status */
+      --green:       #4A9B7F;
+      --green-dim:   #E4F4EE;
       --amber:       #D97706;
       --amber-dim:   #FEF3C7;
       --red:         #DC2626;
@@ -35,14 +55,21 @@
       --blue:        #2563EB;
       --blue-dim:    #DBEAFE;
 
+      /* Easing — Emil Kowalski */
       --ease-out:    cubic-bezier(0.23, 1, 0.32, 1);
       --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
       --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-      --r-card: 20px;
-      --r-btn:  14px;
-      --r-inp:  12px;
-      --shadow: 0 2px 12px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.04);
+      /* Geometry */
+      --r-card:  24px;
+      --r-btn:   50px;
+      --r-inp:   14px;
+      --r-icon:  14px;
+
+      /* Shadows — warm tinted */
+      --shadow:       0 2px 16px rgba(100,80,60,0.08), 0 1px 3px rgba(100,80,60,0.04);
+      --shadow-float: 0 8px 32px rgba(100,80,60,0.14);
+      --shadow-btn:   0 4px 20px rgba(45,74,62,0.28);
     }
 
     /* ── Reset ───────────────────────────────────────────── */
@@ -67,102 +94,105 @@
     }
 
     /* ── Screens ─────────────────────────────────────────── */
-    .screen { display: none; padding-bottom: 100px; }
+    .screen { display: none; padding-bottom: 110px; }
     .screen.active { display: block; }
 
     .screen-hdr {
       position: sticky; top: 0; z-index: 50;
-      padding: 52px 20px 14px;
-      background: rgba(246,245,242,0.88);
+      padding: 52px 20px 16px;
+      background: rgba(232,224,213,0.88);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid rgba(0,0,0,0.06);
     }
     .screen-hdr h1 {
-      font-size: 26px; font-weight: 800;
-      letter-spacing: -0.5px; color: var(--text);
+      font-size: 28px; font-weight: 800;
+      letter-spacing: -0.6px; color: var(--text);
     }
-    .screen-hdr p { font-size: 13px; color: var(--muted); margin-top: 1px; }
+    .screen-hdr p { font-size: 13px; color: var(--muted); margin-top: 2px; }
     .content { padding: 16px 16px 0; }
 
-    /* ── Bottom nav (floating pill) ──────────────────────── */
+    /* ── Bottom nav — warm organic ───────────────────────── */
     .nav {
       position: fixed;
-      bottom: max(18px, env(safe-area-inset-bottom));
-      left: 50%; transform: translateX(-50%);
-      width: calc(100% - 32px); max-width: 390px;
-      background: rgba(28,25,23,0.92);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border-radius: 22px;
-      display: flex; padding: 7px; gap: 2px;
+      bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 430px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      padding: 10px 8px max(20px, env(safe-area-inset-bottom)) 8px;
       z-index: 100;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.1),
-                  inset 0 1px 0 rgba(255,255,255,0.06);
+      box-shadow: 0 -4px 24px rgba(100,80,60,0.08);
     }
     .nav-btn {
-      flex: 1; display: flex; flex-direction: column; align-items: center;
-      padding: 8px 4px 7px; gap: 3px;
-      border: none; background: none; cursor: pointer;
-      border-radius: 15px;
-      transition: background 220ms var(--ease-out), transform 160ms var(--ease-out);
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 4px; border: none; background: none; cursor: pointer;
+      border-radius: 16px;
+      transition: transform 140ms var(--ease-out);
     }
-    .nav-btn:active { transform: scale(0.93); }
-    .nav-btn.active { background: rgba(255,255,255,0.1); }
+    .nav-btn:active { transform: scale(0.91); }
+    .nav-icon {
+      width: 38px; height: 38px; border-radius: 13px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 220ms var(--ease-out);
+      background: transparent;
+    }
+    .nav-btn.active .nav-icon { background: var(--accent); }
     .nav-btn svg {
       width: 20px; height: 20px; fill: none;
-      stroke: rgba(255,255,255,0.38); stroke-width: 2;
+      stroke: var(--subtle); stroke-width: 1.5;
       stroke-linecap: round; stroke-linejoin: round;
       transition: stroke 220ms var(--ease-out);
     }
-    .nav-btn.active svg { stroke: rgba(255,255,255,0.96); }
+    .nav-btn.active svg { stroke: white; }
     .nav-btn span {
-      font-size: 10px; font-weight: 600;
-      color: rgba(255,255,255,0.38);
+      font-size: 10px; font-weight: 600; color: var(--subtle);
       transition: color 220ms var(--ease-out);
     }
-    .nav-btn.active span { color: rgba(255,255,255,0.96); }
+    .nav-btn.active span { color: var(--accent); font-weight: 700; }
 
     /* ── Cards ───────────────────────────────────────────── */
     .card {
       background: var(--surface);
       border-radius: var(--r-card);
-      padding: 18px;
+      padding: 20px;
       margin-bottom: 12px;
-      border: 1px solid rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.04);
       box-shadow: var(--shadow);
     }
     .card-label {
       font-size: 11px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--subtle); margin-bottom: 12px;
+      letter-spacing: 0.09em; color: var(--subtle); margin-bottom: 14px;
     }
     .card-row {
       display: flex; justify-content: space-between; align-items: center;
       margin-bottom: 14px;
     }
-    .card-title {
-      font-size: 16px; font-weight: 700; color: var(--text);
-    }
+    .card-title { font-size: 16px; font-weight: 700; color: var(--text); }
 
     /* ── Section title ───────────────────────────────────── */
     .section-title {
-      font-size: 16px; font-weight: 700; color: var(--text);
+      font-size: 15px; font-weight: 700; color: var(--text);
       margin: 20px 0 10px;
     }
 
     /* ── Buttons ─────────────────────────────────────────── */
     .btn {
       display: inline-flex; align-items: center; justify-content: center;
-      gap: 8px; padding: 14px 20px;
+      gap: 8px; padding: 15px 20px;
       border-radius: var(--r-btn); font-family: 'Outfit', sans-serif;
       font-weight: 600; font-size: 15px; border: none;
       cursor: pointer; width: 100%;
-      transition: transform 160ms var(--ease-out), opacity 160ms;
+      transition: transform 140ms var(--ease-out), box-shadow 140ms var(--ease-out), opacity 160ms;
     }
     .btn:active { transform: scale(0.97); }
-    .btn:disabled { opacity: 0.5; pointer-events: none; }
-    .btn-primary { background: var(--accent); color: white; }
-    .btn-surface { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    .btn:disabled { opacity: 0.45; pointer-events: none; }
+    .btn-primary {
+      background: var(--accent); color: white;
+      box-shadow: var(--shadow-btn);
+    }
+    .btn-primary:active { box-shadow: 0 2px 8px rgba(45,74,62,0.2); }
+    .btn-surface { background: var(--surface); color: var(--text); border: 1.5px solid var(--border); }
     .btn-ghost   { background: var(--accent-dim); color: var(--accent); }
     .btn-danger  { background: var(--red-dim); color: var(--red); }
     .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
@@ -173,15 +203,16 @@
       color: var(--muted); margin: 16px 0 6px;
     }
     .inp {
-      width: 100%; padding: 13px 14px;
+      width: 100%; padding: 13px 15px;
       border: 1.5px solid var(--border); border-radius: var(--r-inp);
       font-family: 'Outfit', sans-serif; font-size: 15px; color: var(--text);
-      background: var(--bg); outline: none;
+      background: var(--surface-alt); outline: none;
       transition: border-color 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
     }
     .inp:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(212,81,31,0.1);
+      box-shadow: 0 0 0 3px rgba(45,74,62,0.1);
+      background: var(--surface);
     }
     textarea.inp { min-height: 72px; resize: none; }
 
@@ -189,7 +220,7 @@
     .chips { display: flex; gap: 8px; flex-wrap: wrap; }
     .chip {
       flex: 1; min-width: 0; padding: 10px 8px;
-      border-radius: 11px; background: var(--border-soft);
+      border-radius: 12px; background: var(--surface-alt);
       border: 1.5px solid var(--border); cursor: pointer;
       font-family: 'Outfit', sans-serif; font-size: 13px;
       font-weight: 600; color: var(--muted); text-align: center;
@@ -203,100 +234,105 @@
       display: flex; align-items: baseline; gap: 6px; margin-bottom: 16px;
     }
     .cal-num {
-      font-size: 52px; font-weight: 800; letter-spacing: -2px;
+      font-size: 56px; font-weight: 800; letter-spacing: -2.5px;
       color: var(--text); line-height: 1;
     }
     .cal-unit { font-size: 18px; font-weight: 600; color: var(--muted); }
     .macro-strip {
       display: grid; grid-template-columns: repeat(3,1fr);
-      background: var(--bg); border-radius: 14px;
+      background: var(--surface-alt); border-radius: 16px;
       overflow: hidden; border: 1px solid var(--border);
     }
-    .macro-cell {
-      padding: 12px 10px; text-align: center;
-    }
+    .macro-cell { padding: 14px 10px; text-align: center; }
     .macro-cell + .macro-cell { border-left: 1px solid var(--border); }
-    .macro-val { font-size: 18px; font-weight: 700; display: block; }
-    .macro-key { font-size: 11px; font-weight: 600; color: var(--subtle); margin-top: 2px; display: block; }
+    .macro-val { font-size: 18px; font-weight: 800; display: block; }
+    .macro-key { font-size: 11px; font-weight: 600; color: var(--subtle); margin-top: 3px; display: block; text-transform: uppercase; letter-spacing: 0.06em; }
 
     /* ── Food entries ────────────────────────────────────── */
     .entry {
       background: var(--surface);
       border-radius: var(--r-card); margin-bottom: 10px;
       display: flex; align-items: flex-start;
-      border: 1px solid rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.04);
       box-shadow: var(--shadow);
       overflow: hidden;
       animation: slide-up 280ms var(--ease-out) both;
     }
     .entry:nth-child(1) { animation-delay:  0ms }
-    .entry:nth-child(2) { animation-delay: 40ms }
-    .entry:nth-child(3) { animation-delay: 80ms }
-    .entry:nth-child(4) { animation-delay:120ms }
-    .entry:nth-child(5) { animation-delay:160ms }
-    .entry:nth-child(n+6){ animation-delay:200ms }
+    .entry:nth-child(2) { animation-delay: 45ms }
+    .entry:nth-child(3) { animation-delay: 90ms }
+    .entry:nth-child(4) { animation-delay:135ms }
+    .entry:nth-child(5) { animation-delay:180ms }
+    .entry:nth-child(n+6){ animation-delay:210ms }
 
-    .entry-body { flex:1; padding: 14px 0 14px 16px; min-width: 0; }
-    .entry-title { font-size: 14px; font-weight: 600; color: var(--text); }
+    .entry-icon {
+      width: 42px; height: 42px; border-radius: 13px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin: 14px 0 14px 14px;
+    }
+    .entry-icon svg { width: 20px; height: 20px; fill: none; stroke: white; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    .entry-body { flex:1; padding: 14px 0 14px 12px; min-width: 0; }
+    .entry-title { font-size: 14px; font-weight: 700; color: var(--text); }
     .entry-time  { font-size: 12px; color: var(--subtle); margin-top: 2px; }
     .pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
-    .pill {
-      background: var(--accent-dim); color: var(--accent-text);
-      font-size: 11px; font-weight: 600;
-      padding: 3px 8px; border-radius: 20px;
-    }
+    .pill { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+    .pill-carbs   { background: var(--carbs-dim);   color: var(--carbs); }
+    .pill-protein { background: var(--protein-dim); color: var(--protein); }
+    .pill-fat     { background: var(--fat-dim);     color: var(--fat); }
     .del-btn {
       background: none; border: none; cursor: pointer;
       color: var(--subtle); padding: 14px 14px;
       align-self: center; flex-shrink: 0;
       transition: color 160ms, transform 160ms var(--ease-out);
     }
-    .del-btn:active { transform: scale(0.9); color: var(--red); }
+    .del-btn:active { transform: scale(0.88); color: var(--red); }
 
     /* ── Training entries ────────────────────────────────── */
     .t-entry {
       background: var(--surface);
-      border-radius: var(--r-card); padding: 16px;
+      border-radius: var(--r-card); padding: 18px;
       margin-bottom: 10px;
       display: flex; align-items: flex-start; gap: 14px;
-      border: 1px solid rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.04);
       border-left-width: 3px;
       box-shadow: var(--shadow);
       animation: slide-up 280ms var(--ease-out) both;
     }
     .t-entry:nth-child(1) { animation-delay:  0ms }
-    .t-entry:nth-child(2) { animation-delay: 40ms }
-    .t-entry:nth-child(3) { animation-delay: 80ms }
+    .t-entry:nth-child(2) { animation-delay: 45ms }
+    .t-entry:nth-child(3) { animation-delay: 90ms }
     .t-type-icon {
-      width: 36px; height: 36px; border-radius: 10px;
+      width: 46px; height: 46px; border-radius: 16px;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
     }
-    .t-type-icon svg { width: 18px; height: 18px; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .t-type-icon svg { width: 22px; height: 22px; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
     .t-info { flex: 1; min-width: 0; }
     .t-name { font-size: 15px; font-weight: 700; color: var(--text); }
     .t-detail { font-size: 13px; color: var(--muted); margin-top: 3px; }
-    .t-note { font-size: 12px; color: var(--subtle); margin-top: 4px; font-style: italic; }
+    .t-note { font-size: 12px; color: var(--subtle); margin-top: 5px; font-style: italic; }
 
     /* ── Sleep stats ─────────────────────────────────────── */
     .sleep-stats {
       display: grid; grid-template-columns: repeat(3,1fr);
-      margin-bottom: 14px; gap: 0;
+      margin-bottom: 0; gap: 0;
+      background: var(--surface-alt); border-radius: 16px; overflow: hidden;
+      border: 1px solid var(--border);
     }
-    .sleep-stat { text-align: center; padding: 8px 4px; }
+    .sleep-stat { text-align: center; padding: 12px 4px; }
     .sleep-stat + .sleep-stat { border-left: 1px solid var(--border); }
-    .sleep-val { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; color: var(--text); }
-    .sleep-lbl { font-size: 11px; font-weight: 600; color: var(--subtle); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .sleep-val { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; color: var(--text); }
+    .sleep-lbl { font-size: 11px; font-weight: 600; color: var(--subtle); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.07em; }
     .quality-badge {
-      border-radius: 12px; padding: 10px 14px;
-      text-align: center; font-size: 14px; font-weight: 600;
+      border-radius: 14px; padding: 10px 14px;
+      text-align: center; font-size: 14px; font-weight: 700;
     }
 
     /* ── Quality buttons ─────────────────────────────────── */
     .q-row { display: flex; gap: 8px; }
     .q-btn {
-      flex: 1; height: 48px; border-radius: 11px;
-      background: var(--border-soft); border: 1.5px solid var(--border);
+      flex: 1; height: 50px; border-radius: 14px;
+      background: var(--surface-alt); border: 1.5px solid var(--border);
       font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700;
       color: var(--muted); cursor: pointer;
       transition: all 200ms var(--ease-out);
@@ -308,8 +344,8 @@
     /* ── Duration preview ────────────────────────────────── */
     .dur-preview {
       display: flex; align-items: center; gap: 8px;
-      background: var(--accent-dim); border-radius: 10px;
-      padding: 10px 14px; margin-top: 8px;
+      background: var(--accent-dim); border-radius: 12px;
+      padding: 11px 14px; margin-top: 8px;
       font-size: 14px; font-weight: 600; color: var(--accent);
       animation: fade-in 200ms var(--ease-out);
     }
@@ -317,16 +353,16 @@
 
     /* ── Exercise builder ────────────────────────────────── */
     .ex-block {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: 14px; padding: 14px; margin-bottom: 10px;
+      background: var(--surface-alt); border: 1px solid var(--border);
+      border-radius: 18px; padding: 14px; margin-bottom: 10px;
     }
     .ex-hdr { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
     .set-header { display: grid; grid-template-columns: 28px 1fr 1fr; gap: 6px; margin-bottom: 6px; }
-    .set-header span { font-size: 11px; font-weight: 700; color: var(--subtle); text-align: center; text-transform: uppercase; letter-spacing: 0.06em; }
+    .set-header span { font-size: 11px; font-weight: 700; color: var(--subtle); text-align: center; text-transform: uppercase; letter-spacing: 0.07em; }
     .set-row { display: grid; grid-template-columns: 28px 1fr 1fr; gap: 6px; align-items: center; margin-bottom: 6px; }
     .set-num { font-size: 12px; color: var(--subtle); font-weight: 700; text-align: center; }
     .set-inp {
-      padding: 9px; border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 10px; border: 1.5px solid var(--border); border-radius: 11px;
       font-family: 'Outfit', sans-serif; font-size: 14px;
       font-weight: 600; text-align: center; width: 100%;
       background: var(--surface); color: var(--text); outline: none;
@@ -336,46 +372,47 @@
     .add-set-btn {
       background: none; border: none; cursor: pointer;
       font-family: 'Outfit', sans-serif; font-size: 13px;
-      font-weight: 600; color: var(--accent); padding: 4px 0;
+      font-weight: 600; color: var(--accent); padding: 6px 0;
     }
     .rm-ex-btn {
       background: var(--red-dim); border: none; cursor: pointer;
-      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+      width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
       color: var(--red);
       transition: transform 160ms var(--ease-out);
     }
-    .rm-ex-btn:active { transform: scale(0.9); }
+    .rm-ex-btn:active { transform: scale(0.88); }
     .add-ex-btn {
-      width: 100%; padding: 13px; border: 1.5px dashed var(--border);
-      border-radius: 12px; background: none; cursor: pointer;
+      width: 100%; padding: 14px; border: 1.5px dashed var(--border);
+      border-radius: 14px; background: none; cursor: pointer;
       font-family: 'Outfit', sans-serif; font-size: 14px;
-      font-weight: 600; color: var(--muted); margin-top: 4px;
+      font-weight: 600; color: var(--muted); margin-top: 6px;
       transition: border-color 180ms, color 180ms;
     }
     .add-ex-btn:hover { border-color: var(--accent); color: var(--accent); }
 
     /* ── History rows ────────────────────────────────────── */
     .h-row {
-      background: var(--surface); border-radius: 14px;
+      background: var(--surface); border-radius: 18px;
       padding: 14px 16px; margin-bottom: 8px;
-      display: flex; justify-content: space-between; align-items: center;
-      border: 1px solid rgba(0,0,0,0.05);
+      display: flex; align-items: center; gap: 12px;
+      border: 1px solid rgba(0,0,0,0.04);
+      box-shadow: var(--shadow);
       animation: slide-up 280ms var(--ease-out) both;
     }
     .h-row:nth-child(1) { animation-delay:  0ms }
-    .h-row:nth-child(2) { animation-delay: 40ms }
-    .h-row:nth-child(3) { animation-delay: 80ms }
-    .h-date { font-size: 14px; font-weight: 600; color: var(--text); }
+    .h-row:nth-child(2) { animation-delay: 45ms }
+    .h-row:nth-child(3) { animation-delay: 90ms }
+    .h-date { font-size: 14px; font-weight: 700; color: var(--text); text-transform: capitalize; }
     .h-time { font-size: 12px; color: var(--subtle); margin-top: 2px; }
-    .h-right { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-    .h-dur  { font-size: 20px; font-weight: 800; color: var(--text); }
+    .h-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+    .h-dur  { font-size: 22px; font-weight: 800; color: var(--text); line-height: 1; }
     .q-dot  { width: 10px; height: 10px; border-radius: 50%; }
 
     /* ── Bottom sheet modal ──────────────────────────────── */
     .overlay {
       position: fixed; inset: 0;
-      background: rgba(28,25,23,0.4);
+      background: rgba(28,25,23,0.45);
       z-index: 200; display: none;
       opacity: 0; transition: opacity 300ms var(--ease-out);
     }
@@ -383,38 +420,36 @@
     .modal {
       position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%);
       width: 100%; max-width: 430px;
-      background: var(--bg); border-radius: 24px 24px 0 0;
+      background: var(--bg); border-radius: 32px 32px 0 0;
       z-index: 201; max-height: 92svh; overflow-y: auto;
       transition: transform 380ms var(--ease-drawer);
     }
     .overlay.open .modal { transform: translateX(-50%) translateY(0); }
     .modal-hdr {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 18px 18px 14px;
+      padding: 20px 20px 16px;
       background: var(--surface);
-      border-radius: 24px 24px 0 0;
+      border-radius: 32px 32px 0 0;
       border-bottom: 1px solid var(--border);
       position: sticky; top: 0; z-index: 10;
     }
     .modal-hdr h2 { font-size: 17px; font-weight: 700; color: var(--text); }
     .modal-close {
-      width: 30px; height: 30px; border-radius: 50%;
-      background: var(--border-soft); border: none; cursor: pointer;
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--surface-alt); border: none; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       color: var(--muted);
       transition: background 160ms, transform 160ms var(--ease-out);
     }
-    .modal-close:active { transform: scale(0.9); }
-    .modal-body { padding: 18px 18px 48px; }
+    .modal-close:active { transform: scale(0.88); }
+    .modal-body { padding: 20px 20px 52px; }
 
     /* ── Advice box ──────────────────────────────────────── */
     .advice-box {
       background: var(--surface);
-      border-radius: 16px; padding: 16px;
-      border-left: 3px solid var(--accent);
-      border: 1px solid var(--border);
-      border-left-color: var(--accent);
-      border-left-width: 3px;
+      border-radius: 20px; padding: 18px;
+      border: 1px solid rgba(45,74,62,0.12);
+      border-left-width: 3px; border-left-color: var(--accent);
     }
     .advice-box p { font-size: 14px; color: var(--text); line-height: 1.7; white-space: pre-wrap; }
     .refresh-btn {
@@ -428,23 +463,23 @@
     .refresh-btn svg { width: 14px; height: 14px; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; }
 
     /* ── Empty states ────────────────────────────────────── */
-    .empty { padding: 48px 16px; text-align: center; }
+    .empty { padding: 52px 16px; text-align: center; }
     .empty-ring {
-      width: 72px; height: 72px; border-radius: 50%;
-      background: var(--border-soft); border: 1.5px solid var(--border);
+      width: 76px; height: 76px; border-radius: 50%;
+      background: var(--surface-alt); border: 1.5px solid var(--border);
       display: flex; align-items: center; justify-content: center;
       margin: 0 auto 16px;
     }
-    .empty-ring svg { width: 28px; height: 28px; stroke: var(--subtle); stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-    .empty h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-    .empty p  { font-size: 14px; color: var(--muted); }
+    .empty-ring svg { width: 30px; height: 30px; stroke: var(--subtle); stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .empty h3 { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .empty p  { font-size: 14px; color: var(--muted); line-height: 1.5; }
 
     /* ── Loading skeleton ────────────────────────────────── */
     .loader { position: fixed; inset: 0; background: var(--bg); z-index: 300; display: none; padding: 80px 20px 0; }
     .loader.show { display: block; }
     .sk {
-      border-radius: 12px;
-      background: linear-gradient(90deg, var(--border) 0%, var(--border-soft) 50%, var(--border) 100%);
+      border-radius: 14px;
+      background: linear-gradient(90deg, var(--border) 0%, var(--surface) 50%, var(--border) 100%);
       background-size: 200% 100%;
       animation: shimmer 1.6s ease-in-out infinite;
     }
@@ -485,23 +520,59 @@
       font-size: 13px; font-weight: 600;
       margin-bottom: 6px; border: 1.5px solid;
     }
-    .t-chip svg { width: 14px; height: 14px; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .t-chip svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Bento grid (dashboard) ──────────────────────────── */
+    .bento-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; margin-bottom: 12px;
+    }
+    .bento-tile {
+      background: var(--surface); border-radius: 20px;
+      padding: 16px; border: 1px solid rgba(0,0,0,0.04);
+      box-shadow: var(--shadow);
+      animation: slide-up 260ms var(--ease-out) both;
+    }
+    .bento-tile:nth-child(1) { animation-delay: 50ms }
+    .bento-tile:nth-child(2) { animation-delay:100ms }
+    .bento-tile:nth-child(3) { animation-delay:150ms }
+    .bento-tile:nth-child(4) { animation-delay:200ms }
+    .bento-icon {
+      width: 36px; height: 36px; border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 10px;
+    }
+    .bento-icon svg { width: 18px; height: 18px; fill: none; stroke: white; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    .bento-val { font-size: 24px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; line-height: 1; }
+    .bento-unit { font-size: 12px; font-weight: 600; color: var(--muted); }
+    .bento-lbl { font-size: 12px; color: var(--subtle); margin-top: 4px; }
+
+    /* ── Donut chart ─────────────────────────────────────── */
+    .donut-wrap { display: flex; align-items: center; gap: 18px; margin-bottom: 16px; }
+    .donut-legend { flex: 1; display: flex; flex-direction: column; gap: 9px; }
+    .donut-leg-item { display: flex; align-items: center; gap: 8px; }
+    .donut-leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .donut-leg-name { font-size: 13px; color: var(--muted); flex: 1; }
+    .donut-leg-val  { font-size: 13px; font-weight: 700; color: var(--text); }
 
     /* ── Misc ────────────────────────────────────────────── */
     .hint { font-size: 13px; color: var(--subtle); font-style: italic; text-align: center; padding: 8px 0; }
     .edit-link { background: none; border: none; cursor: pointer; font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 600; color: var(--accent); }
-    .warning { background: var(--amber-dim); border: 1px solid #F59E0B; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 13px; color: #92400E; line-height: 1.5; }
+    .warning { background: var(--amber-dim); border: 1px solid #F59E0B; border-radius: 14px; padding: 13px 15px; margin-bottom: 14px; font-size: 13px; color: #92400E; line-height: 1.5; }
     a { color: var(--accent); }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
 
-    /* ── Animations ──────────────────────────────────────── */
+    /* ── Animations — Emil Kowalski style ───────────────── */
     @keyframes slide-up {
-      from { opacity: 0; transform: translateY(10px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
     }
     @keyframes fade-in {
       from { opacity: 0; }
       to   { opacity: 1; }
+    }
+    @keyframes draw-ring {
+      from { stroke-dashoffset: 283; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -511,14 +582,14 @@
     /* ── Food database ──────────────────────────────────── */
     .db-sep {
       display: flex; align-items: center; gap: 10px;
-      margin: 16px 0; color: var(--subtle); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+      margin: 16px 0; color: var(--subtle); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em;
     }
     .db-sep::before, .db-sep::after { content: ''; flex: 1; height: 1px; background: var(--border); }
     .db-row {
-      background: var(--surface); border-radius: 14px;
+      background: var(--surface); border-radius: 16px;
       padding: 14px 16px; margin-bottom: 8px;
       display: flex; align-items: center; gap: 10px;
-      border: 1px solid rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.04);
       cursor: pointer;
       transition: background 160ms var(--ease-out), transform 160ms var(--ease-out);
       animation: slide-up 200ms var(--ease-out) both;
@@ -528,30 +599,38 @@
     .db-row:nth-child(3) { animation-delay: 60ms }
     .db-row:nth-child(4) { animation-delay: 90ms }
     .db-row:nth-child(5) { animation-delay:120ms }
-    .db-row:active { transform: scale(0.98); background: var(--border-soft); }
+    .db-row:active { transform: scale(0.98); background: var(--surface-alt); }
     .db-row-body { flex: 1; min-width: 0; }
     .db-row-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .db-row-sub  { font-size: 12px; color: var(--subtle); margin-top: 2px; }
     .db-msg { text-align: center; padding: 24px 16px; font-size: 14px; color: var(--muted); }
 
+    /* ── Barcode scanner cleanup ───────────────────────── */
+    /* Hide html5-qrcode's default UI chrome, keep only the video */
+    #bc-scanner-inner video { width:100% !important; border-radius:0; display:block; }
+    #bc-scanner-inner img   { display:none !important; }
+    #bc-scanner-inner       { font-size:0; }
+    #bc-scanner-inner > div[style] { background:transparent !important; border:none !important; }
+
     /* ── Exercise picker ────────────────────────────────── */
     .ex-pick-wrap {
-      border: 1px solid var(--border); border-radius: 12px;
+      border: 1px solid var(--border); border-radius: 14px;
       overflow: hidden; margin-top: 10px;
     }
     .ex-pick-item {
-      padding: 12px 14px; border-bottom: 1px solid var(--border-soft);
+      padding: 13px 14px; border-bottom: 1px solid var(--border-soft);
       cursor: pointer; display: flex; flex-direction: column;
       transition: background 140ms var(--ease-out);
       -webkit-tap-highlight-color: transparent;
     }
     .ex-pick-item:last-child { border-bottom: none; }
-    .ex-pick-item:active { background: var(--border-soft); }
+    .ex-pick-item:active { background: var(--surface-alt); }
     .ex-pick-name { font-size: 14px; font-weight: 600; color: var(--text); }
     .ex-pick-muscles { font-size: 12px; color: var(--subtle); margin-top: 2px; }
     .ex-selected {
-      background: var(--bg); border-radius: 12px; padding: 10px 12px;
+      background: var(--surface); border-radius: 12px; padding: 10px 12px;
       border: 1.5px solid var(--border); flex: 1; min-width: 0;
+      display: flex; align-items: center; gap: 10px;
     }
     .ex-selected-name { font-size: 14px; font-weight: 700; color: var(--text); }
     .ex-selected-muscles { font-size: 12px; color: var(--subtle); margin-top: 2px; }
@@ -596,23 +675,33 @@
   <!-- ── Floating nav ──────────────────────────────── -->
   <nav class="nav">
     <button class="nav-btn active" id="nav-dashboard" onclick="switchTab('dashboard')">
-      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </div>
       <span>Coach</span>
     </button>
     <button class="nav-btn" id="nav-food" onclick="switchTab('food')">
-      <svg viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>
+      </div>
       <span>Voeding</span>
     </button>
     <button class="nav-btn" id="nav-training" onclick="switchTab('training')">
-      <svg viewBox="0 0 24 24"><line x1="6" y1="5" x2="6" y2="19"/><line x1="18" y1="5" x2="18" y2="19"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="6" y1="7" x2="10" y2="7"/><line x1="6" y1="17" x2="10" y2="17"/><line x1="14" y1="7" x2="18" y2="7"/><line x1="14" y1="17" x2="18" y2="17"/></svg>
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24"><line x1="6" y1="5" x2="6" y2="19"/><line x1="18" y1="5" x2="18" y2="19"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="6" y1="7" x2="10" y2="7"/><line x1="6" y1="17" x2="10" y2="17"/><line x1="14" y1="7" x2="18" y2="7"/><line x1="14" y1="17" x2="18" y2="17"/></svg>
+      </div>
       <span>Training</span>
     </button>
     <button class="nav-btn" id="nav-sleep" onclick="switchTab('sleep')">
-      <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+      </div>
       <span>Slaap</span>
     </button>
     <button class="nav-btn" id="nav-settings" onclick="switchTab('settings')">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06-.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06-.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </div>
       <span>Instellingen</span>
     </button>
   </nav>
@@ -650,7 +739,6 @@
 <!-- Hidden file inputs -->
 <input type="file" id="inp-camera"  accept="image/*" capture="environment" style="display:none">
 <input type="file" id="inp-gallery" accept="image/*" style="display:none">
-<input type="file" id="inp-barcode" accept="image/*" capture="environment" style="display:none">
 
 <script>
 'use strict';
@@ -664,9 +752,9 @@ const QUALITY_LABELS = ['','Zeer slecht','Slecht','Matig','Goed','Uitstekend'];
 const QUALITY_COLORS = ['','#DC2626','#D97706','#CA8A04','#16A34A','#059669'];
 
 const TYPE_META = {
-  strength:  { label:'Krachttraining', color:'#2563EB', bg:'#DBEAFE', icon:`<svg viewBox="0 0 24 24"><line x1="6" y1="5" x2="6" y2="19"/><line x1="18" y1="5" x2="18" y2="19"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="6" y1="7" x2="10" y2="7"/><line x1="6" y1="17" x2="10" y2="17"/><line x1="14" y1="7" x2="18" y2="7"/><line x1="14" y1="17" x2="18" y2="17"/></svg>` },
-  motocross: { label:'Motorcross',    color:'#DC2626', bg:'#FEE2E2', icon:`<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>` },
-  endurance: { label:'Duurtraining',  color:'#16A34A', bg:'#DCFCE7', icon:`<svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>` },
+  strength:  { label:'Krachttraining', color:'#3D6B5A', bg:'#E4F0EC', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="6" y1="5" x2="6" y2="19"/><line x1="18" y1="5" x2="18" y2="19"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="6" y1="7" x2="10" y2="7"/><line x1="6" y1="17" x2="10" y2="17"/><line x1="14" y1="7" x2="18" y2="7"/><line x1="14" y1="17" x2="18" y2="17"/></svg>` },
+  motocross: { label:'Motorcross',    color:'#C85C2A', bg:'#FAE8DF', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>` },
+  endurance: { label:'Duurtraining',  color:'#7B9E6B', bg:'#EBF3E7', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>` },
 };
 
 const IC = {
@@ -915,6 +1003,7 @@ async function importFitSleep() {
 const todayStr  = () => new Date().toISOString().slice(0,10);
 const forToday  = arr => arr.filter(e => (e.date||e.timestamp||'').startsWith(todayStr()));
 const uid       = () => Math.random().toString(36).slice(2,10);
+const fmtDate   = d  => new Date(d + 'T12:00:00').toLocaleDateString('nl-NL',{weekday:'short',day:'numeric',month:'short'});
 
 function calcDuration(bed, wake) {
   const [bh,bm] = bed.split(':').map(Number);
@@ -1037,13 +1126,25 @@ function toast(msg) {
   requestAnimationFrame(() => { el.style.transform='translateX(-50%) translateY(0)'; });
   setTimeout(() => { el.style.opacity='0'; setTimeout(()=>el.remove(), 300); }, 2200);
 }
+let _activeScanner = null; // tracks live Html5Qrcode instance
+
 function openModal(title, html) {
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-body').innerHTML = html;
   document.getElementById('overlay').classList.add('open');
 }
-function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+function closeModal() {
+  _stopScanner();
+  document.getElementById('overlay').classList.remove('open');
+}
 function overlayClick(e) { if (e.target===document.getElementById('overlay')) closeModal(); }
+
+function _stopScanner() {
+  if (_activeScanner) {
+    _activeScanner.stop().catch(() => {});
+    _activeScanner = null;
+  }
+}
 
 // ═══════════════════════════════════════════════════════
 //  TAB SWITCHING
@@ -1086,7 +1187,7 @@ RENDERS.dashboard = function renderDashboard() {
           : t.type==='motocross' ? `${t.duration??0} min · ${t.intensity}`
           : `${t.enduranceType} · ${t.duration??0} min · ${t.distance??0} km`;
         return `<div class="t-chip" style="color:${m.color};background:${m.bg};border-color:${m.bg}">
-          <span style="stroke:${m.color};display:flex">${m.icon}</span>
+          <span style="display:flex;flex-shrink:0">${m.icon}</span>
           ${m.label} · <span style="font-weight:500">${detail}</span>
         </div>`;
       }).join('');
@@ -1108,33 +1209,94 @@ RENDERS.dashboard = function renderDashboard() {
        <button class="refresh-btn" onclick="reloadAdvice()">${IC.refresh} Vernieuwen</button>`
     : `<button class="btn btn-primary" onclick="reloadAdvice()">${IC.sparkle} Haal advies op</button>`;
 
+  // Donut chart berekeningen
+  const macroTotal = pro + car + fat || 1;
+  const proPct = Math.round(pro / macroTotal * 100);
+  const carPct = Math.round(car / macroTotal * 100);
+  const fatPct = 100 - proPct - carPct;
+  // SVG donut: r=42, circumference=263.9
+  const r = 42; const circ = 2 * Math.PI * r;
+  const proLen = circ * proPct / 100;
+  const carLen = circ * carPct / 100;
+  const fatLen = circ * fatPct / 100;
+  const proOffset = 0;
+  const carOffset = -(proLen);
+  const fatOffset = -(proLen + carLen);
+
+  const donutSVG = `
+    <svg width="110" height="110" viewBox="0 0 110 110" style="flex-shrink:0">
+      <circle cx="55" cy="55" r="${r}" fill="none" stroke="var(--border)" stroke-width="12"/>
+      ${pro>0?`<circle cx="55" cy="55" r="${r}" fill="none" stroke="#4A9B7F" stroke-width="12"
+        stroke-dasharray="${proLen} ${circ-proLen}" stroke-dashoffset="${proOffset}"
+        stroke-linecap="round" transform="rotate(-90 55 55)"
+        style="animation:draw-ring 900ms var(--ease-out) both"/>`:``}
+      ${car>0?`<circle cx="55" cy="55" r="${r}" fill="none" stroke="#E8943A" stroke-width="12"
+        stroke-dasharray="${carLen} ${circ-carLen}" stroke-dashoffset="${carOffset}"
+        stroke-linecap="round" transform="rotate(-90 55 55)"
+        style="animation:draw-ring 900ms 100ms var(--ease-out) both"/>`:``}
+      ${fat>0?`<circle cx="55" cy="55" r="${r}" fill="none" stroke="#7B9E6B" stroke-width="12"
+        stroke-dasharray="${fatLen} ${circ-fatLen}" stroke-dashoffset="${fatOffset}"
+        stroke-linecap="round" transform="rotate(-90 55 55)"
+        style="animation:draw-ring 900ms 200ms var(--ease-out) both"/>`:``}
+      <text x="55" y="50" text-anchor="middle" font-family="Outfit,sans-serif" font-size="18" font-weight="800" fill="var(--text)">${cal>0?cal.toLocaleString('nl-NL'):'—'}</text>
+      <text x="55" y="66" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" font-weight="600" fill="var(--subtle)">kcal</text>
+    </svg>`;
+
   document.getElementById('dashboard-content').innerHTML = `
     ${!apiKey ? `<div class="warning">API-key ontbreekt — ga naar <b>Instellingen</b> om deze in te stellen.</div>` : ''}
 
     <div class="card" style="animation:slide-up 260ms var(--ease-out)">
       <div class="card-label">Voeding vandaag</div>
-      <div class="cal-hero">
-        <span class="cal-num">${cal.toLocaleString('nl-NL')}</span>
-        <span class="cal-unit">kcal</span>
-      </div>
-      <div class="macro-strip">
-        <div class="macro-cell"><span class="macro-val" style="color:#2563EB">${pro}g</span><span class="macro-key">Eiwit</span></div>
-        <div class="macro-cell"><span class="macro-val" style="color:#D97706">${car}g</span><span class="macro-key">Koolhydr.</span></div>
-        <div class="macro-cell"><span class="macro-val" style="color:#DC2626">${fat}g</span><span class="macro-key">Vet</span></div>
+      <div class="donut-wrap">
+        ${donutSVG}
+        <div class="donut-legend">
+          <div class="donut-leg-item">
+            <div class="donut-leg-dot" style="background:#4A9B7F"></div>
+            <span class="donut-leg-name">Eiwit</span>
+            <span class="donut-leg-val">${pro}g</span>
+          </div>
+          <div class="donut-leg-item">
+            <div class="donut-leg-dot" style="background:#E8943A"></div>
+            <span class="donut-leg-name">Koolhydr.</span>
+            <span class="donut-leg-val">${car}g</span>
+          </div>
+          <div class="donut-leg-item">
+            <div class="donut-leg-dot" style="background:#7B9E6B"></div>
+            <span class="donut-leg-name">Vetten</span>
+            <span class="donut-leg-val">${fat}g</span>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="card" style="animation:slide-up 260ms 50ms var(--ease-out) both">
+    <div class="bento-grid" style="animation:slide-up 260ms 60ms var(--ease-out) both">
+      <div class="bento-tile">
+        <div class="bento-icon" style="background:#3D6B5A">
+          <svg viewBox="0 0 24 24"><line x1="6" y1="5" x2="6" y2="19"/><line x1="18" y1="5" x2="18" y2="19"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="6" y1="7" x2="10" y2="7"/><line x1="6" y1="17" x2="10" y2="17"/><line x1="14" y1="7" x2="18" y2="7"/><line x1="14" y1="17" x2="18" y2="17"/></svg>
+        </div>
+        <div class="bento-val">${training.length}</div>
+        <div class="bento-lbl">Training${training.length!==1?'en':''} vandaag</div>
+      </div>
+      <div class="bento-tile">
+        <div class="bento-icon" style="background:#C8A882">
+          <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        </div>
+        <div class="bento-val">${sleep ? sleep.duration.toFixed(1) : '—'}<span class="bento-unit">u</span></div>
+        <div class="bento-lbl">Slaap vannacht</div>
+      </div>
+    </div>
+
+    <div class="card" style="animation:slide-up 260ms 100ms var(--ease-out) both">
       <div class="card-label">Training</div>
       ${trainingHTML}
     </div>
 
-    <div class="card" style="animation:slide-up 260ms 100ms var(--ease-out) both">
+    <div class="card" style="animation:slide-up 260ms 140ms var(--ease-out) both">
       <div class="card-label">Slaap</div>
       ${sleepHTML}
     </div>
 
-    <div class="card" style="animation:slide-up 260ms 150ms var(--ease-out) both">
+    <div class="card" style="animation:slide-up 260ms 180ms var(--ease-out) both">
       <div class="card-label">AI Coach</div>
       ${adviceHTML}
     </div>`;
@@ -1173,9 +1335,9 @@ RENDERS.food = function renderFood() {
         <span class="cal-unit">kcal</span>
       </div>
       <div class="macro-strip">
-        <div class="macro-cell"><span class="macro-val" style="color:#2563EB">${pro}g</span><span class="macro-key">Eiwit</span></div>
-        <div class="macro-cell"><span class="macro-val" style="color:#D97706">${car}g</span><span class="macro-key">Koolhydr.</span></div>
-        <div class="macro-cell"><span class="macro-val" style="color:#DC2626">${fat}g</span><span class="macro-key">Vet</span></div>
+        <div class="macro-cell"><span class="macro-val" style="color:var(--protein)">${pro}g</span><span class="macro-key">Eiwit</span></div>
+        <div class="macro-cell"><span class="macro-val" style="color:var(--carbs)">${car}g</span><span class="macro-key">Koolhydr.</span></div>
+        <div class="macro-cell"><span class="macro-val" style="color:var(--fat)">${fat}g</span><span class="macro-key">Vet</span></div>
       </div>
     </div>
 
@@ -1183,21 +1345,24 @@ RENDERS.food = function renderFood() {
       <button class="btn btn-primary" onclick="document.getElementById('inp-camera').click()">${IC.camera} Foto</button>
       <button class="btn btn-surface" onclick="document.getElementById('inp-gallery').click()">${IC.gallery} Galerij</button>
     </div>
-    <button class="btn btn-ghost" style="margin-bottom:20px;animation:slide-up 260ms 60ms var(--ease-out) both" onclick="openFoodSearch()">
-      ${IC.search} Zoeken / Barcode scannen
-    </button>
+    <div class="btn-row" style="margin-bottom:20px;animation:slide-up 260ms 60ms var(--ease-out) both">
+      <button class="btn btn-ghost" onclick="openFoodSearch()">${IC.search} Zoeken</button>
+      <button class="btn btn-ghost" onclick="openBarcodeScanner()">${IC.barcode} Barcode</button>
+    </div>
 
     <div class="section-title" style="animation:slide-up 260ms 80ms var(--ease-out) both">Vandaag gegeten</div>
     ${entries.length===0 ? emptyHTML : entries.map(e => `
       <div class="entry">
+        <div class="entry-icon" style="background:#E8943A">
+          <svg viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>
+        </div>
         <div class="entry-body">
           <div class="entry-title">${e.description}</div>
-          <div class="entry-time">${new Date(e.timestamp).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}</div>
+          <div class="entry-time">${new Date(e.timestamp).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})} · ${Math.round(e.calories)} kcal</div>
           <div class="pills">
-            <span class="pill">${Math.round(e.calories)} kcal</span>
-            <span class="pill" style="background:var(--blue-dim);color:#1D4ED8">E ${Math.round(e.protein)}g</span>
-            <span class="pill" style="background:var(--amber-dim);color:#92400E">K ${Math.round(e.carbs)}g</span>
-            <span class="pill" style="background:var(--red-dim);color:#991B1B">V ${Math.round(e.fat)}g</span>
+            <span class="pill pill-protein">E ${Math.round(e.protein)}g</span>
+            <span class="pill pill-carbs">K ${Math.round(e.carbs)}g</span>
+            <span class="pill pill-fat">V ${Math.round(e.fat)}g</span>
           </div>
         </div>
         <button class="del-btn" onclick="deleteFood('${e.id}')">${IC.trash}</button>
@@ -1289,8 +1454,8 @@ function buildSearchHTML() {
 
     <div class="db-sep"><span>of</span></div>
 
-    <button class="btn btn-surface" onclick="document.getElementById('inp-barcode').click()">
-      ${IC.barcode} Foto van barcode
+    <button class="btn btn-surface" onclick="openBarcodeScanner()">
+      ${IC.barcode} Barcode scannen
     </button>
 
     <div id="db-results" style="margin-top:20px"></div>
@@ -1335,52 +1500,149 @@ function renderDBResults() {
     </div>`).join('');
 }
 
-// ── Barcode scan (photo → html5-qrcode decode → OFF lookup) ──
-async function handleBarcodePhoto(file) {
-  if (!file) return;
+// ── Live barcode scanner (camera stream → html5-qrcode → OFF lookup) ──
+function _barcodeFormats() {
+  if (typeof Html5QrcodeSupportedFormats === 'undefined') return [];
+  return [
+    Html5QrcodeSupportedFormats.EAN_13,
+    Html5QrcodeSupportedFormats.EAN_8,
+    Html5QrcodeSupportedFormats.UPC_A,
+    Html5QrcodeSupportedFormats.UPC_E,
+    Html5QrcodeSupportedFormats.CODE_128,
+  ];
+}
+
+function buildScannerModalHTML() {
+  return `
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">
+      Richt de camera op de streepjescode. Blijf stil totdat hij automatisch herkend wordt.
+    </p>
+
+    <div id="bc-scanner-box" style="
+      width:100%;border-radius:18px;overflow:hidden;
+      background:#111;position:relative;min-height:200px;
+      display:flex;align-items:center;justify-content:center;
+    ">
+      <div id="bc-scanner-inner" style="width:100%"></div>
+      <!-- aiming reticle overlay -->
+      <div style="
+        position:absolute;inset:0;pointer-events:none;
+        display:flex;align-items:center;justify-content:center;
+      ">
+        <div style="
+          width:72%;height:90px;border-radius:10px;
+          border:2px solid rgba(255,255,255,0.7);
+          box-shadow:0 0 0 2000px rgba(0,0,0,0.35);
+        "></div>
+      </div>
+    </div>
+
+    <p id="bc-status" style="
+      text-align:center;font-size:13px;color:var(--muted);
+      margin:12px 0 16px;min-height:18px;
+    ">Camera starten…</p>
+
+    <div class="db-sep"><span>of typ handmatig</span></div>
+
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <input class="inp" id="bc-manual" type="text" inputmode="numeric"
+        placeholder="Barcode nummer (bijv. 8710398530622)"
+        style="flex:1"
+        onkeydown="if(event.key==='Enter') lookupManualBarcode()">
+      <button class="btn btn-primary"
+        style="width:auto;padding:13px 16px;flex-shrink:0"
+        onclick="lookupManualBarcode()">
+        ${IC.search}
+      </button>
+    </div>`;
+}
+
+async function openBarcodeScanner() {
+  _stopScanner(); // stop any previous instance
+  openModal('Barcode scannen', buildScannerModalHTML());
+
   if (typeof Html5Qrcode === 'undefined') {
-    toast('Barcode-decoder niet geladen, probeer tekst zoeken'); return;
+    document.getElementById('bc-status').textContent = 'Scanner niet geladen — typ het nummer handmatig';
+    return;
   }
-  showLoader('Barcode lezen…');
+
+  const containerId = 'bc-scanner-inner';
   try {
-    const tmpId = 'barcode-tmp-' + uid();
-    const tmp   = document.createElement('div');
-    tmp.id = tmpId; tmp.style.display = 'none';
-    document.body.appendChild(tmp);
+    const config = {
+      fps: 12,
+      qrbox: { width: Math.min(280, window.innerWidth - 80), height: 110 },
+      aspectRatio: 1.5,
+      ...(_barcodeFormats().length ? { formatsToSupport: _barcodeFormats() } : {}),
+      showTorchButtonIfSupported: true,
+    };
 
-    const reader = new Html5Qrcode(tmpId, { verbose: false });
-    let code;
-    try {
-      code = await reader.scanFile(file, false);
-    } finally {
-      reader.clear();
-      tmp.remove();
+    _activeScanner = new Html5Qrcode(containerId, { verbose: false });
+
+    await _activeScanner.start(
+      { facingMode: 'environment' },
+      config,
+      async (decodedText) => {
+        // Barcode herkend — stop scanner en zoek product op
+        _stopScanner();
+        const digits = decodedText.replace(/\D/g, '');
+        document.getElementById('bc-status').textContent = `Gevonden: ${digits} — product ophalen…`;
+        await _lookupAndShowProduct(digits);
+      },
+      () => {
+        // Per-frame failure — normaal, negeer
+        const el = document.getElementById('bc-status');
+        if (el && el.textContent === 'Camera starten…') {
+          el.textContent = 'Richt op de barcode…';
+        }
+      }
+    );
+
+    const el = document.getElementById('bc-status');
+    if (el) el.textContent = 'Richt op de barcode…';
+
+  } catch (err) {
+    const msg = err?.message || '';
+    const el = document.getElementById('bc-status');
+    if (el) {
+      if (msg.includes('permission') || msg.includes('NotAllowed')) {
+        el.textContent = 'Camera-toegang geweigerd — typ het nummer handmatig';
+      } else if (msg.includes('NotFound') || msg.includes('device')) {
+        el.textContent = 'Geen camera gevonden — typ het nummer handmatig';
+      } else {
+        el.textContent = 'Camera kon niet starten — typ het nummer handmatig';
+      }
     }
-
-    const digits = code.replace(/\D/g, '');
-    if (digits.length < 8) throw new Error('Geen geldige barcode herkend');
-
-    const product = await barcodeToProduct(digits);
-    _dbResults  = [product];
-    _portionProd = product;
-
-    // If search modal is already open, show in results — otherwise open portion picker directly
-    const resultsEl = document.getElementById('db-results');
-    if (resultsEl) {
-      renderDBResults();
-    } else {
-      openModal(product.name, buildPortionPickerHTML(product));
-      updatePortionPreview();
-    }
-  } catch(e) {
-    toast('Fout: ' + e.message);
-  } finally {
-    hideLoader();
-    document.getElementById('inp-barcode').value = '';
+    console.warn('Barcode scanner start failed:', err);
   }
 }
 
-document.getElementById('inp-barcode').addEventListener('change', e => handleBarcodePhoto(e.target.files[0]));
+async function lookupManualBarcode() {
+  const val = (document.getElementById('bc-manual')?.value || '').replace(/\D/g, '');
+  if (val.length < 8) { toast('Voer minimaal 8 cijfers in'); return; }
+  _stopScanner();
+  await _lookupAndShowProduct(val);
+}
+
+async function _lookupAndShowProduct(digits) {
+  showLoader('Product ophalen…');
+  try {
+    const product = await barcodeToProduct(digits);
+    _dbResults   = [product];
+    _portionProd = product;
+    closeModal();
+    openModal(product.name, buildPortionPickerHTML(product));
+    updatePortionPreview();
+  } catch(e) {
+    toast(e.message);
+    // Restore scanner modal with the failed barcode pre-filled
+    const statusEl = document.getElementById('bc-status');
+    if (statusEl) statusEl.textContent = 'Product niet gevonden — probeer een andere barcode';
+    const manualEl = document.getElementById('bc-manual');
+    if (manualEl) manualEl.value = digits;
+  } finally {
+    hideLoader();
+  }
+}
 
 // ── Portion picker ───────────────────────────────────────
 function buildPortionPickerHTML(p) {
@@ -1402,11 +1664,11 @@ function buildPortionPickerHTML(p) {
           <span class="macro-key">kcal/100g</span>
         </div>
         <div class="macro-cell">
-          <span class="macro-val" style="font-size:15px;color:#2563EB">${p.per100.protein}g</span>
+          <span class="macro-val" style="font-size:15px;color:var(--protein)">${p.per100.protein}g</span>
           <span class="macro-key">Eiwit</span>
         </div>
         <div class="macro-cell">
-          <span class="macro-val" style="font-size:15px;color:#D97706">${p.per100.carbs}g</span>
+          <span class="macro-val" style="font-size:15px;color:var(--carbs)">${p.per100.carbs}g</span>
           <span class="macro-key">Koolhydr.</span>
         </div>
       </div>
@@ -1547,7 +1809,7 @@ function renderTEntry(e, i) {
       ${exImgs.map(ex=>`<img src="${ex.imgUrl}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;background:var(--border-soft)">`).join('')}
     </div>` : '';
   return `<div class="t-entry" style="border-left-color:${m.color};animation-delay:${i*40}ms">
-    <div class="t-type-icon" style="background:${m.bg};stroke:${m.color}">${m.icon}</div>
+    <div class="t-type-icon" style="background:${m.bg};color:${m.color}"><span style="display:flex;stroke:${m.color}">${m.icon}</span></div>
     <div class="t-info">
       <div class="t-name">${m.label}</div>
       <div class="t-detail">${detail}</div>
@@ -1935,20 +2197,29 @@ RENDERS.sleep = function renderSleep() {
   let html = '';
 
   if (today && !sF.editing) {
+    const durBarPct = Math.min(100, (today.duration / 9) * 100);
     html += `
       <div class="card" style="animation:slide-up 260ms var(--ease-out)">
         <div class="card-row">
           <div class="card-label" style="margin:0">Afgelopen nacht</div>
           <button class="edit-link" onclick="startEditSleep()">${IC.pencil} Bewerken</button>
         </div>
-        <div class="sleep-stats">
-          <div class="sleep-stat"><div class="sleep-val">${today.duration.toFixed(1)}u</div><div class="sleep-lbl">Duur</div></div>
-          <div class="sleep-stat"><div class="sleep-val">${today.bedtime}</div><div class="sleep-lbl">Slaaptijd</div></div>
-          <div class="sleep-stat"><div class="sleep-val">${today.wakeTime}</div><div class="sleep-lbl">Wakker</div></div>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px">
+          <span style="font-size:48px;font-weight:800;letter-spacing:-2px;color:var(--text);line-height:1">${today.duration.toFixed(1)}</span>
+          <span style="font-size:18px;font-weight:600;color:var(--muted)">uur slaap</span>
         </div>
-        <div class="quality-badge" style="background:${QUALITY_COLORS[today.quality]}18;color:${QUALITY_COLORS[today.quality]}">
-          <span class="status-dot" style="background:${QUALITY_COLORS[today.quality]}"></span>
-          ${QUALITY_LABELS[today.quality]} — ${today.quality}/5
+        <div style="height:6px;border-radius:4px;background:var(--border);overflow:hidden;margin-bottom:16px">
+          <div style="width:${durBarPct}%;height:100%;border-radius:4px;background:${QUALITY_COLORS[today.quality]};transition:width 800ms var(--ease-out)"></div>
+        </div>
+        <div class="sleep-stats">
+          <div class="sleep-stat"><div class="sleep-val" style="font-size:20px">${today.bedtime}</div><div class="sleep-lbl">Slaaptijd</div></div>
+          <div class="sleep-stat"><div class="sleep-val" style="font-size:20px">${today.wakeTime}</div><div class="sleep-lbl">Wakker</div></div>
+          <div class="sleep-stat">
+            <div style="display:flex;align-items:center;justify-content:center;gap:5px">
+              ${[1,2,3,4,5].map(n=>`<div style="width:8px;height:8px;border-radius:50%;background:${n<=today.quality?QUALITY_COLORS[today.quality]:'var(--border)'}"></div>`).join('')}
+            </div>
+            <div class="sleep-lbl" style="margin-top:6px">${QUALITY_LABELS[today.quality]}</div>
+          </div>
         </div>
       </div>`;
   } else {
@@ -1974,13 +2245,31 @@ RENDERS.sleep = function renderSleep() {
       </div>`;
   }
 
+  // Google Fit import shortcut
+  html += `
+    <button class="btn btn-ghost" style="margin-bottom:16px;animation:slide-up 260ms 80ms var(--ease-out) both" onclick="importFitSleep()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><polyline points="12 6 12 12 16 14"/><path d="M22 2 12 12"/><polyline points="18 2 22 2 22 6"/></svg>
+      Importeren uit Google Fit
+    </button>`;
+
   if (history.length>0) {
-    html += `<div class="section-title">Geschiedenis</div>`;
-    html += history.map((s,i) => `
+    html += `<div class="section-title">Laatste 7 nachten</div>`;
+    html += history.map((s,i) => {
+      const barPct = Math.min(100, (s.duration / 9) * 100);
+      return `
       <div class="h-row" style="animation-delay:${i*40}ms">
-        <div><div class="h-date">${s.date}</div><div class="h-time">${s.bedtime} → ${s.wakeTime}</div></div>
-        <div class="h-right"><div class="h-dur">${s.duration.toFixed(1)}u</div><div class="q-dot" style="background:${QUALITY_COLORS[s.quality]}"></div></div>
-      </div>`).join('');
+        <div style="flex:1;min-width:0">
+          <div class="h-date">${fmtDate(s.date)}</div>
+          <div class="h-time">${s.bedtime} → ${s.wakeTime}</div>
+          <div style="margin-top:7px;height:5px;border-radius:3px;background:var(--border);overflow:hidden">
+            <div style="width:${barPct}%;height:100%;border-radius:3px;background:${QUALITY_COLORS[s.quality]};transition:width 600ms var(--ease-out)"></div>
+          </div>
+        </div>
+        <div class="h-right" style="margin-left:14px">
+          <div class="h-dur">${s.duration.toFixed(1)}<span style="font-size:14px;font-weight:600;color:var(--muted)">u</span></div>
+          <div style="font-size:11px;font-weight:700;color:${QUALITY_COLORS[s.quality]}">${QUALITY_LABELS[s.quality]}</div>
+        </div>
+      </div>`}).join('');
   }
 
   document.getElementById('sleep-content').innerHTML = html;
